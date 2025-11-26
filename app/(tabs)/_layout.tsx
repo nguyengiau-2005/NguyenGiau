@@ -13,21 +13,52 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
+        tabBarInactiveTintColor: '#9e9e9e',
         headerShown: false,
         tabBarButton: HapticTab,
-      }}>
+        tabBarStyle: {
+          paddingBottom: 6,
+          height: 60,
+        }
+      }}
+    >
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          title: 'Trang chủ',
+          tabBarIcon: ({ color }) => (
+            <IconSymbol size={28} name="house.fill" color={color} />
+          ),
         }}
       />
+
       <Tabs.Screen
-        name="explore"
+        name="Cart"
         options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+          title: 'Giỏ hàng',
+          tabBarIcon: ({ color }) => (
+            <IconSymbol size={26} name="cart.fill" color={color} />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="Order"
+        options={{
+          title: 'Đơn hàng',
+          tabBarIcon: ({ color }) => (
+            <IconSymbol size={26} name="bag.fill" color={color} />
+          ),
+        }}
+      />
+
+      <Tabs.Screen
+        name="Profile"
+        options={{
+          title: 'Tài khoản',
+          tabBarIcon: ({ color }) => (
+            <IconSymbol size={26} name="person.crop.circle.fill" color={color} />
+          ),
         }}
       />
     </Tabs>
