@@ -8,19 +8,7 @@ import { AlertCircle, Bell, Flame, Gift, Heart, MapPin, Menu, Search, ShoppingCa
 import { useState } from 'react';
 import { Alert, Image, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
-/* 💄 Product data from assets */
-const products = [
-  { id: 1, name: 'BLEMISH - Mụn Control', price: 180000, rating: 4.7, image: require('../../assets/images/product/blemish.jpg'), discount: 15, isBestseller: true },
-  { id: 2, name: 'Cell Fusion C - Serum', price: 320000, rating: 4.8, image: require('../../assets/images/product/cellfusion.jpg'), discount: 12, isBestseller: true },
-  { id: 3, name: 'Innisfree - Toner', price: 150000, rating: 4.6, image: require('../../assets/images/product/innisfree.jpg'), discount: 10, isBestseller: false },
-  { id: 4, name: 'Torriden - Kem Dưỡng', price: 280000, rating: 4.9, image: require('../../assets/images/product/kemduong_torriden.jpg'), discount: 0, isBestseller: true },
-  { id: 5, name: 'TIAM - Sữa Rửa Mặt', price: 210000, rating: 4.9, image: require('../../assets/images/product/ruamat_tiam.jpg'), discount: 20, isBestseller: true },
-  { id: 6, name: 'Serum Hyaluronic', price: 250000, rating: 4.8, image: require('../../assets/images/product/serum1.jpg'), discount: 8, isBestseller: false },
-  { id: 7, name: 'MEDICUBE - Serum', price: 420000, rating: 4.7, image: require('../../assets/images/product/Serum_medicube.jpg'), discount: 25, isBestseller: true },
-  { id: 8, name: 'SKIN1004 - Essence', price: 380000, rating: 4.8, image: require('../../assets/images/product/SKIN1004.jpg'), discount: 18, isBestseller: false },
-  { id: 9, name: 'COCOON - Sữa Rửa Mặt', price: 165000, rating: 4.9, image: require('../../assets/images/product/suaruamat_cocoon.jpg'), discount: 5, isBestseller: false },
-  { id: 10, name: 'Serum Concentrado', price: 290000, rating: 4.8, image: require('../../assets/images/product/serum_concentrado.jpg'), discount: 22, isBestseller: true }
-];
+import products from '@/constants/products';
 
 const categories = [
   { name: 'Makeup', icon: '💄' },
@@ -43,16 +31,55 @@ const vouchers = [
 ];
 
 const brands = [
-  { id: 1, name: 'Laneige', logo: '🇰🇷' },
-  { id: 2, name: 'Dior', logo: '🇫🇷' },
-  { id: 3, name: 'SK-II', logo: '🇯🇵' },
-  { id: 4, name: 'Shiseido', logo: '🇯🇵' }
+  { id: 1, name: 'Laneige', logo: '🇰🇷', description: 'K-Beauty hàng đầu', products: '180+ sản phẩm' },
+  { id: 2, name: 'Dior', logo: '💎', description: 'Luxury & Prestige', products: '95+ sản phẩm' },
+  { id: 3, name: 'SK-II', logo: '✨', description: 'Skincare Premium', products: '45+ sản phẩm' },
+  { id: 4, name: 'Shiseido', logo: '🎌', description: 'Japan Excellence', products: '120+ sản phẩm' },
+  { id: 5, name: 'The Face Shop', logo: '🌿', description: 'Natural & Organic', products: '200+ sản phẩm' },
+  { id: 6, name: 'Clinique', logo: '⚕️', description: 'Dermatologist', products: '88+ sản phẩm' }
 ];
 
-const articles = [
-  { id: 1, title: '5 bước skincare cơ bản', image: '📱', views: '12.5K' },
-  { id: 2, title: 'Cách chọn son phù hợp', image: '💄', views: '8.3K' },
-  { id: 3, title: 'Xu hướng makeup 2024', image: '✨', views: '15.2K' }
+const videoArticles = [
+  { 
+    id: 1, 
+    title: '5 bước skincare cơ bản cho da mụn', 
+    category: 'Skincare',
+    thumbnail: '🎬',
+    views: '125K',
+    duration: '8:42',
+    creator: 'Dr. Skin Expert',
+    likes: '12.5K'
+  },
+  { 
+    id: 2, 
+    title: 'Cách chọn màu son hoàn hảo cho da ngăm', 
+    category: 'Makeup',
+    thumbnail: '💄',
+    views: '89K',
+    duration: '6:15',
+    creator: 'Beauty Bella',
+    likes: '8.3K'
+  },
+  { 
+    id: 3, 
+    title: 'Xu hướng makeup 2024 - Tinted glass skin', 
+    category: 'Trends',
+    thumbnail: '✨',
+    views: '152K',
+    duration: '12:38',
+    creator: 'MakeUp Artist Pro',
+    likes: '15.2K'
+  },
+  { 
+    id: 4, 
+    title: 'Dưỡng da mặt đúng cách - Full routine', 
+    category: 'Tutorial',
+    thumbnail: '🧴',
+    views: '98K',
+    duration: '10:22',
+    creator: 'Beauty Channel',
+    likes: '9.8K'
+  }
 ];
 
 const searchSuggestions = ['Serum Vitamin C', 'Kem dưỡng ẩm', 'Sữa rửa mặt', 'Mặt nạ', 'Nước hoa'];
@@ -110,6 +137,7 @@ export default function HomeScreen() {
         elevation: 3
       }}
       activeOpacity={0.85}
+      onPress={() => router.push(`/product/${item.id}`)}
     >
       <View style={{ position: 'relative', height: 140, backgroundColor: '#f5f5f5', overflow: 'hidden' }}>
         <Image source={{ uri: item.image }} style={{ width: '100%', height: '100%' }} />
@@ -315,6 +343,7 @@ export default function HomeScreen() {
             <TouchableOpacity
               key={idx}
               style={{ width: 140, marginRight: 12, backgroundColor: '#fff', borderRadius: 12, overflow: 'hidden', shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 4, elevation: 2 }}
+              onPress={() => router.push(`/product/${item.id}`)}
             >
               <View style={{ position: 'relative', height: 120, backgroundColor: '#f5f5f5' }}>
                 <Image source={{ uri: item.image }} style={{ width: '100%', height: '100%' }} />
@@ -384,6 +413,7 @@ export default function HomeScreen() {
           <TouchableOpacity
             key={idx}
             style={{ marginBottom: 12, backgroundColor: '#fff', borderRadius: 12, flexDirection: 'row', overflow: 'hidden', shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 }}
+            onPress={() => router.push(`/product/${item.id}`)}
           >
             <Image source={{ uri: item.image }} style={{ width: 100, height: 100 }} />
             <View style={{ flex: 1, padding: 12, justifyContent: 'space-between' }}>
@@ -421,34 +451,142 @@ export default function HomeScreen() {
 
       {/* ====== BRANDS ====== */}
       <View style={{ marginHorizontal: 16, marginTop: 24 }}>
-        <Text style={{ fontSize: 16, fontWeight: '800', color: '#333', marginBottom: 12 }}>Thương Hiệu Nổi Bật</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -16, paddingHorizontal: 16 }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <Text style={{ fontSize: 16, fontWeight: '800', color: '#333' }}>Thương Hiệu Nổi Bật</Text>
+          <TouchableOpacity>
+            <Text style={{ fontSize: 12, fontWeight: '600', color: '#ff6b9d' }}>Xem tất cả →</Text>
+          </TouchableOpacity>
+        </View>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginBottom: 12 }}>
           {brands.map((brand, idx) => (
             <TouchableOpacity
               key={idx}
-              style={{ alignItems: 'center', marginRight: 16, paddingHorizontal: 16, paddingVertical: 12, backgroundColor: '#fff', borderRadius: 12, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 }}
+              style={{
+                width: '48%',
+                backgroundColor: '#fff',
+                borderRadius: 14,
+                padding: 14,
+                marginBottom: 12,
+                shadowColor: '#000',
+                shadowOpacity: 0.08,
+                shadowRadius: 6,
+                elevation: 2,
+              }}
             >
-              <Text style={{ fontSize: 32, marginBottom: 4 }}>{brand.logo}</Text>
-              <Text style={{ fontSize: 12, fontWeight: '600', color: '#333' }}>{brand.name}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 10 }}>
+                <Text style={{ fontSize: 36, marginRight: 10 }}>{brand.logo}</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '800', color: '#222' }}>{brand.name}</Text>
+                  <Text style={{ fontSize: 11, color: '#ff6b9d', fontWeight: '600', marginTop: 2 }}>{brand.description}</Text>
+                </View>
+              </View>
+              <Text style={{ fontSize: 10, color: '#888', marginBottom: 8 }}>{brand.products}</Text>
+              <LinearGradient
+                colors={['#ff6b9d', '#ff4a86']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={{ paddingVertical: 6, paddingHorizontal: 10, borderRadius: 8 }}
+              >
+                <Text style={{ fontSize: 10, fontWeight: '700', color: '#fff', textAlign: 'center' }}>Xem Cửa Hàng</Text>
+              </LinearGradient>
             </TouchableOpacity>
           ))}
-        </ScrollView>
+        </View>
       </View>
 
-      {/* ====== ARTICLES / VIDEOS ====== */}
+      {/* ====== FEATURED VIDEOS ====== */}
       <View style={{ marginHorizontal: 16, marginTop: 24, marginBottom: 100 }}>
-        <Text style={{ fontSize: 16, fontWeight: '800', color: '#333', marginBottom: 12 }}>Bài Viết & Videos</Text>
-        {articles.map((article, idx) => (
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Text style={{ fontSize: 18 }}>🎬</Text>
+            <Text style={{ fontSize: 16, fontWeight: '800', color: '#333' }}>Video Hướng Dẫn</Text>
+          </View>
+          <TouchableOpacity>
+            <Text style={{ fontSize: 12, fontWeight: '600', color: '#ff6b9d' }}>Xem tất cả →</Text>
+          </TouchableOpacity>
+        </View>
+        {videoArticles.map((video: any, idx: number) => (
           <TouchableOpacity
             key={idx}
-            style={{ marginBottom: 12, backgroundColor: '#fff', borderRadius: 12, flexDirection: 'row', overflow: 'hidden', shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 }}
+            style={{
+              marginBottom: 14,
+              backgroundColor: '#fff',
+              borderRadius: 14,
+              overflow: 'hidden',
+              shadowColor: '#000',
+              shadowOpacity: 0.08,
+              shadowRadius: 6,
+              elevation: 2,
+            }}
           >
-            <View style={{ width: 100, height: 100, backgroundColor: '#f5f5f5', justifyContent: 'center', alignItems: 'center' }}>
-              <Text style={{ fontSize: 40 }}>{article.image}</Text>
+            {/* Video Thumbnail */}
+            <View style={{ position: 'relative', height: 160, backgroundColor: '#f5f5f5', justifyContent: 'center', alignItems: 'center' }}>
+              <Text style={{ fontSize: 60 }}>{video.thumbnail}</Text>
+              {/* Play Button */}
+              <View
+                style={{
+                  position: 'absolute',
+                  width: 48,
+                  height: 48,
+                  borderRadius: 24,
+                  backgroundColor: '#ff6b9d',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}
+              >
+                <Text style={{ fontSize: 18 }}>▶️</Text>
+              </View>
+              {/* Duration Badge */}
+              <View
+                style={{
+                  position: 'absolute',
+                  bottom: 10,
+                  right: 10,
+                  backgroundColor: '#00000080',
+                  paddingHorizontal: 8,
+                  paddingVertical: 4,
+                  borderRadius: 4,
+                }}
+              >
+                <Text style={{ fontSize: 10, fontWeight: '600', color: '#fff' }}>{video.duration}</Text>
+              </View>
             </View>
-            <View style={{ flex: 1, padding: 12, justifyContent: 'space-between' }}>
-              <Text style={{ fontSize: 13, fontWeight: '700', color: '#333' }} numberOfLines={2}>{article.title}</Text>
-              <Text style={{ fontSize: 11, color: '#999' }}>👁 {article.views} views</Text>
+            {/* Video Info */}
+            <View style={{ padding: 12 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6, gap: 6 }}>
+                <View
+                  style={{
+                    paddingHorizontal: 8,
+                    paddingVertical: 3,
+                    backgroundColor: '#ffe0e8',
+                    borderRadius: 6,
+                  }}
+                >
+                  <Text style={{ fontSize: 10, fontWeight: '700', color: '#ff6b9d' }}>{video.category}</Text>
+                </View>
+              </View>
+              <Text style={{ fontSize: 13, fontWeight: '800', color: '#222', marginBottom: 8, lineHeight: 18 }}>
+                {video.title}
+              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 11, fontWeight: '600', color: '#333' }}>{video.creator}</Text>
+                  <View style={{ flexDirection: 'row', gap: 10, marginTop: 4 }}>
+                    <Text style={{ fontSize: 10, color: '#888' }}>👁 {video.views}</Text>
+                    <Text style={{ fontSize: 10, color: '#ff6b9d', fontWeight: '600' }}>❤️ {video.likes}</Text>
+                  </View>
+                </View>
+                <TouchableOpacity
+                  style={{
+                    backgroundColor: '#ff6b9d',
+                    paddingHorizontal: 12,
+                    paddingVertical: 6,
+                    borderRadius: 8,
+                  }}
+                >
+                  <Text style={{ fontSize: 10, fontWeight: '700', color: '#fff' }}>Xem</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </TouchableOpacity>
         ))}

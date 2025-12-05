@@ -14,6 +14,7 @@ declare module 'sonner';
 declare module 'react-resizable-panels';
 declare module 'react-native-swiper';
 declare module 'react-native-linear-gradient';
+declare module 'react-native-qrcode-svg';
 
 declare module 'lucide-react';
 
@@ -46,5 +47,5 @@ declare global {
   type UseEmblaCarouselType = [any, Record<string, any>];
 }
 
-export { }; // keep this file a module to avoid global leakage
+// end of declarations
 

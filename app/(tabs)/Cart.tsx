@@ -112,12 +112,17 @@ export default function CartScreen() {
         {/* ====== CART ITEMS ====== */}
         <View style={{ paddingHorizontal: 16, paddingTop: 16 }}>
           {cart.map((item) => (
-            <View key={item.id} style={{ marginBottom: 12, backgroundColor: '#fff', borderRadius: 14, overflow: 'hidden', shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 }}>
-              <View style={{ flexDirection: 'row', padding: 12, gap: 12 }}>
+            <TouchableOpacity
+              key={item.id}
+              activeOpacity={0.9}
+              onPress={() => router.push(`/product/${item.id}`)}
+              style={{ marginBottom: 12, backgroundColor: '#fff', borderRadius: 14, overflow: 'hidden', shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 6, elevation: 3 }}
+            >
+              <View style={{ flexDirection: 'row', padding: 12, gap: 12, alignItems: 'center' }}>
                 {/* Checkbox */}
                 <TouchableOpacity 
-                  style={{ width: 24, height: 24, borderRadius: 6, borderWidth: 2, borderColor: '#ff6b9d', justifyContent: 'center', alignItems: 'center', marginTop: 4 }}
-                  onPress={() => toggleSelectItem(item.id)}
+                  style={{ width: 26, height: 26, borderRadius: 6, borderWidth: 2, borderColor: '#ff6b9d', justifyContent: 'center', alignItems: 'center' }}
+                  onPress={(e) => { e.stopPropagation?.(); toggleSelectItem(item.id); }}
                 >
                   {selectedItems.includes(item.id) && (
                     <View style={{ width: 16, height: 16, borderRadius: 4, backgroundColor: '#ff6b9d' }} />
@@ -125,40 +130,39 @@ export default function CartScreen() {
                 </TouchableOpacity>
 
                 {/* Product Image */}
-                <Image source={item.img} style={{ width: 70, height: 70, borderRadius: 10 }} />
+                <Image source={item.img} style={{ width: 84, height: 84, borderRadius: 12, backgroundColor: '#fafafa' }} />
 
                 {/* Product Info */}
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#333', marginBottom: 4 }} numberOfLines={2}>{item.name}</Text>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#ff6b9d' }}>{item.price.toLocaleString('vi-VN')}đ</Text>
-                    <Text style={{ fontSize: 10, color: '#999' }}>x{item.qty}</Text>
+                <View style={{ flex: 1, justifyContent: 'space-between' }}>
+                  <View>
+                    <Text style={{ fontSize: 14, fontWeight: '800', color: '#222' }} numberOfLines={2}>{item.name}</Text>
+                    <Text style={{ marginTop: 6, fontSize: 13, fontWeight: '700', color: '#ff6b9d' }}>{item.price.toLocaleString('vi-VN')}đ</Text>
                   </View>
 
-                  {/* Quantity Controls */}
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <TouchableOpacity 
-                      style={{ width: 24, height: 24, borderRadius: 6, backgroundColor: '#ffe8f0', justifyContent: 'center', alignItems: 'center' }}
-                      onPress={() => decrease(item.id)}
-                    >
-                      <Minus size={14} color="#ff6b9d" strokeWidth={2} />
-                    </TouchableOpacity>
-                    <Text style={{ width: 30, textAlign: 'center', fontSize: 12, fontWeight: '600' }}>{item.qty}</Text>
-                    <TouchableOpacity 
-                      style={{ width: 24, height: 24, borderRadius: 6, backgroundColor: '#ffe8f0', justifyContent: 'center', alignItems: 'center' }}
-                      onPress={() => increase(item.id)}
-                    >
-                      <Plus size={14} color="#ff6b9d" strokeWidth={2} />
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <TouchableOpacity 
+                        style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: '#fff', borderWidth: 1, borderColor: '#eee', justifyContent: 'center', alignItems: 'center' }}
+                        onPress={(e) => { e.stopPropagation?.(); decrease(item.id); }}
+                      >
+                        <Minus size={14} color="#ff6b9d" strokeWidth={2} />
+                      </TouchableOpacity>
+                      <Text style={{ width: 28, textAlign: 'center', fontSize: 13, fontWeight: '600' }}>{item.qty}</Text>
+                      <TouchableOpacity 
+                        style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: '#fff', borderWidth: 1, borderColor: '#eee', justifyContent: 'center', alignItems: 'center' }}
+                        onPress={(e) => { e.stopPropagation?.(); increase(item.id); }}
+                      >
+                        <Plus size={14} color="#ff6b9d" strokeWidth={2} />
+                      </TouchableOpacity>
+                    </View>
+
+                    <TouchableOpacity onPress={(e) => { e.stopPropagation?.(); removeFromCart(item.id); }} style={{ padding: 6 }}>
+                      <Trash2 size={18} color="#ff6b9d" />
                     </TouchableOpacity>
                   </View>
                 </View>
-
-                {/* Delete Button */}
-                <TouchableOpacity onPress={() => removeFromCart(item.id)}>
-                  <Trash2 size={18} color="#ff6b9d" />
-                </TouchableOpacity>
               </View>
-            </View>
+            </TouchableOpacity>
           ))}
         </View>
 

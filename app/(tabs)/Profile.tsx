@@ -232,7 +232,7 @@ export default function ProfileScreen() {
           {[
             { icon: History, label: 'Lịch sử mua hàng', route: '/user/order-history' as any },
             { icon: FileText, label: 'Đánh giá của tôi', route: null },
-            { icon: AlertCircle, label: 'Đã xem gần đây', route: null }
+            { icon: AlertCircle, label: 'Đã xem gần đây', route: '/user/recent' as any }
           ].map((item, idx) => (
             <TouchableOpacity
               key={idx}

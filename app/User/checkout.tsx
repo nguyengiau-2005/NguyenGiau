@@ -1,3 +1,4 @@
+import { useAuth } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
 import { useOrders } from '@/contexts/OrdersContext';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -17,6 +18,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import QRCode from 'react-native-qrcode-svg';
 
 interface VoucherOption {
   code: string;
@@ -36,6 +38,7 @@ interface ShippingMethod {
 export default function CheckoutScreen() {
   const router = useRouter();
   const { selectedCheckoutItems, clearCart } = useCart();
+  const auth = useAuth();
   const { addOrder } = useOrders();
   
   // Nếu không có items từ cart, hiển thị empty state
@@ -56,6 +59,8 @@ export default function CheckoutScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [showVoucherModal, setShowVoucherModal] = useState(false);
   const [showShippingVoucherModal, setShowShippingVoucherModal] = useState(false);
+  const [showBankModal, setShowBankModal] = useState(false);
+  const [bankPaymentRef, setBankPaymentRef] = useState<string | null>(null);
 
   const vouchers: VoucherOption[] = [
     { code: 'SAVE50K', discount: 50000, type: 'fixed', description: 'Giảm 50.000đ' },
@@ -112,10 +117,38 @@ export default function CheckoutScreen() {
   }
 
   const handlePlaceOrder = () => {
+    // Require login before placing an order
+    if (!auth.isLoggedIn) {
+      Alert.alert('Yêu cầu đăng nhập', 'Bạn cần đăng nhập để đặt hàng', [
+        { text: 'Hủy', style: 'cancel' },
+        { text: 'Đăng nhập', onPress: () => router.push('/auth/login' as any) },
+      ]);
+      return;
+    }
+
+    // If payment method is bank transfer, show QR modal instead of directly placing
+    if (paymentMethod === 'bank') {
+      // generate a payment reference for this bank transfer session
+      const ref = Date.now().toString();
+      setBankPaymentRef(ref);
+      setShowBankModal(true);
+      return;
+    }
+
     setIsLoading(true);
     setTimeout(() => {
       setIsLoading(false);
-      addOrder(cartItems, 'Pending');
+      addOrder(cartItems, 'Pending', undefined, {
+        total,
+        subtotal,
+        shippingCost: finalShippingCost,
+        shippingAddress,
+        shippingMethod,
+        paymentMethod,
+        notes,
+        voucherCode: selectedVoucher?.code,
+        voucherDiscount,
+      });
       clearCart();
       Alert.alert('Thành công', 'Đơn hàng đã được đặt', [
         {
@@ -128,6 +161,31 @@ export default function CheckoutScreen() {
         },
       ]);
     }, 1500);
+  };
+
+  const verifyBankPayment = () => {
+    // Simulate verifying the bank transfer after scanning QR / user confirms
+    setIsLoading(true);
+    setTimeout(() => {
+      setIsLoading(false);
+      setShowBankModal(false);
+      addOrder(cartItems, 'Paid', bankPaymentRef ?? undefined, {
+        total,
+        subtotal,
+        shippingCost: finalShippingCost,
+        shippingAddress,
+        shippingMethod,
+        paymentMethod,
+        notes,
+        voucherCode: selectedVoucher?.code,
+        voucherDiscount,
+      });
+      setBankPaymentRef(null);
+      clearCart();
+      Alert.alert('Thanh toán thành công', 'Chúng tôi đã nhận được chuyển khoản của bạn', [
+        { text: 'Xem lịch sử', onPress: () => router.push('/user/order-history' as any) },
+      ]);
+    }, 1800);
   };
 
   return (
@@ -368,6 +426,7 @@ export default function CheckoutScreen() {
           <TouchableOpacity
             onPress={() => setUsePoints(!usePoints)}
             style={styles.pointsOption}
+            activeOpacity={0.8}
           >
             <View style={[styles.checkbox, usePoints && styles.checkboxChecked]}>
               {usePoints && <Text style={styles.checkmark}>✓</Text>}
@@ -376,6 +435,7 @@ export default function CheckoutScreen() {
               <Text style={styles.pointsLabel}>Dùng 200 điểm = 20.000đ</Text>
               <Text style={styles.pointsBalance}>Số dư: 2.500 điểm</Text>
             </View>
+            <Text style={{ color: '#999' }}>{usePoints ? 'Đã chọn' : 'Chọn'}</Text>
           </TouchableOpacity>
         </View>
 
@@ -399,43 +459,36 @@ export default function CheckoutScreen() {
         {/* Final Summary */}
         <View style={styles.finalSummary}>
           <View style={styles.finalSummaryRow}>
-            <Text style={styles.finalLabel}>Tổng thanh toán:</Text>
+            <Text style={styles.finalLabel}>Tổng thanh toán</Text>
             <Text style={styles.finalPrice}>{total.toLocaleString()}đ</Text>
           </View>
           {savedAmount > 0 && (
             <View style={styles.savingsInfo}>
-              <Text style={styles.savingsInfoText}>
-                💰 Bạn đã tiết kiệm {savedAmount.toLocaleString()}đ
-              </Text>
+              <Text style={styles.savingsInfoText}>Bạn đã tiết kiệm {savedAmount.toLocaleString()}đ</Text>
             </View>
           )}
-          <Text style={styles.termsText}>
-            Bằng cách nhấn "Đặt hàng", bạn đồng ý với{' '}
-            <Text style={styles.termsLink}>Điều khoản dịch vụ</Text>
-            {' '}và{' '}
-            <Text style={styles.termsLink}>Chính sách đổi trả</Text>
-          </Text>
+          <Text style={styles.termsText}>Bằng việc đặt hàng bạn đồng ý với điều khoản của cửa hàng</Text>
         </View>
 
-        <View style={{ height: 100 }} />
+        <View style={{ height: 120 }} />
       </ScrollView>
 
       {/* Fixed Bottom Checkout Bar */}
       <View style={styles.bottomBar}>
         <View>
-          <Text style={styles.bottomLabel}>Tổng cộng</Text>
+          <Text style={styles.bottomLabel}>Tổng</Text>
           <Text style={styles.bottomPrice}>{total.toLocaleString()}đ</Text>
         </View>
-        <TouchableOpacity
-          onPress={handlePlaceOrder}
-          disabled={isLoading}
-          style={[styles.checkoutButton, isLoading && { opacity: 0.6 }]}
-        >
-          {isLoading ? (
-            <ActivityIndicator size="small" color="white" />
-          ) : (
-            <Text style={styles.checkoutButtonText}>Đặt hàng</Text>
-          )}
+        <TouchableOpacity onPress={handlePlaceOrder} disabled={isLoading} activeOpacity={0.9}>
+          <LinearGradient colors={["#ff6b9d", "#ff4a86"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ borderRadius: 10 }}>
+            <View style={{ paddingVertical: 12, paddingHorizontal: 28, minWidth: 140, alignItems: 'center' }}>
+              {isLoading ? (
+                <ActivityIndicator size="small" color="white" />
+              ) : (
+                <Text style={[styles.checkoutButtonText, { fontWeight: '900' }]}>Đặt hàng</Text>
+              )}
+            </View>
+          </LinearGradient>
         </TouchableOpacity>
       </View>
 
@@ -513,6 +566,46 @@ export default function CheckoutScreen() {
                 </TouchableOpacity>
               )}
             />
+          </View>
+        </View>
+      </Modal>
+
+      {/* Bank Transfer Modal (QR) */}
+      <Modal visible={showBankModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { paddingBottom: 24 }]}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Chuyển khoản ngân hàng</Text>
+              <TouchableOpacity onPress={() => setShowBankModal(false)}>
+                <Text style={styles.modalClose}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={{ padding: 20, alignItems: 'center' }}>
+              {bankPaymentRef ? (
+                <QRCode
+                  value={JSON.stringify({
+                    ref: bankPaymentRef,
+                    amount: total,
+                    account: '0123456789',
+                    bank: 'NGUYEN GIAU BANK',
+                    beneficiary: 'NguyenGiau Shop',
+                  })}
+                  size={220}
+                />
+              ) : (
+                <ActivityIndicator size="large" />
+              )}
+              <Text style={{ fontSize: 14, color: '#333', fontWeight: '600', marginBottom: 6 }}>Quét mã QR để chuyển khoản</Text>
+              <Text style={{ fontSize: 12, color: '#666', textAlign: 'center', marginBottom: 14 }}>Sử dụng ứng dụng ngân hàng của bạn để quét mã và chuyển tiền vào tài khoản cửa hàng.</Text>
+              <Text style={{ fontSize: 13, color: '#444', fontWeight: '700', marginBottom: 12 }}>Số tiền cần chuyển: {total.toLocaleString()}đ</Text>
+              <TouchableOpacity onPress={verifyBankPayment} style={[styles.checkoutButton, { minWidth: 180 }]} disabled={isLoading}>
+                {isLoading ? (
+                  <ActivityIndicator color="white" />
+                ) : (
+                  <Text style={styles.checkoutButtonText}>Tôi đã chuyển tiền</Text>
+                )}
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>

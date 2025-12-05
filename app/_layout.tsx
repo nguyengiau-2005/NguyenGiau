@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { CartProvider } from '@/contexts/CartContext';
 import { FavoritesProvider } from '@/contexts/FavoritesContext';
 import { OrdersProvider } from '@/contexts/OrdersContext';
+import { RecentProvider } from '@/contexts/RecentContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export const unstable_settings = {
@@ -37,8 +38,10 @@ export default function RootLayout() {
         <CartProvider>
           <FavoritesProvider>
             <OrdersProvider>
-              <RootLayoutNav />
-              <StatusBar style="auto" />
+              <RecentProvider>
+                <RootLayoutNav />
+                <StatusBar style="auto" />
+              </RecentProvider>
             </OrdersProvider>
           </FavoritesProvider>
         </CartProvider>

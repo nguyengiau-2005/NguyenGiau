@@ -1,24 +1,39 @@
+import { useAuth } from '@/contexts/AuthContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { Camera, ChevronLeft } from 'lucide-react-native';
-import React, { useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 export default function EditProfileScreen() {
   const router = useRouter();
-  const [fullName, setFullName] = useState('Nguyễn Giao');
-  const [email, setEmail] = useState('nguyengiao@email.com');
-  const [phone, setPhone] = useState('+84 123 456 789');
+  const { user, updateProfile } = useAuth();
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSave = () => {
+  useEffect(() => {
+    if (user) {
+      setFullName(user.fullName || '');
+      setEmail(user.email || '');
+      setPhone(user.phone || '');
+    }
+  }, [user]);
+
+  const handleSave = async () => {
+    if (!fullName.trim()) return Alert.alert('Lỗi', 'Vui lòng nhập họ và tên');
     setIsLoading(true);
-    setTimeout(() => {
+    try {
+      await updateProfile(fullName.trim(), phone.trim());
       setIsLoading(false);
       Alert.alert('Thành công', 'Hồ sơ đã được cập nhật', [
         { text: 'OK', onPress: () => router.back() },
       ]);
-    }, 1500);
+    } catch (err) {
+      setIsLoading(false);
+      Alert.alert('Lỗi', 'Cập nhật không thành công');
+    }
   };
 
   const handleChangeAvatar = () => {
@@ -45,7 +60,7 @@ export default function EditProfileScreen() {
       {/* Avatar Section */}
       <View style={styles.avatarContainer}>
         <View style={styles.avatar}>
-          <Text style={styles.avatarText}>NG</Text>
+          <Text style={styles.avatarText}>{user?.fullName ? user.fullName.split(' ').map(n=>n[0]).slice(0,2).join('') : 'NG'}</Text>
         </View>
         <TouchableOpacity onPress={handleChangeAvatar} style={styles.cameraButton}>
           <Camera size={16} color="white" />
@@ -62,15 +77,16 @@ export default function EditProfileScreen() {
           <Text style={styles.label}>Họ và tên</Text>
           <View style={styles.inputWrapper}>
             <Text style={styles.inputIcon}>👤</Text>
-            <View
-              style={styles.input}
-            >
-              <Text style={styles.inputText}>{fullName}</Text>
-            </View>
+            <TextInput
+              value={fullName}
+              onChangeText={setFullName}
+              style={[styles.input, { paddingVertical: 12 }]}
+              placeholder="Họ và tên"
+            />
           </View>
         </View>
 
-        {/* Email */}
+        {/* Email (read-only) */}
         <View style={styles.formGroup}>
           <Text style={styles.label}>Email</Text>
           <View style={styles.inputWrapper}>
@@ -86,9 +102,13 @@ export default function EditProfileScreen() {
           <Text style={styles.label}>Số điện thoại</Text>
           <View style={styles.inputWrapper}>
             <Text style={styles.inputIcon}>📱</Text>
-            <View style={styles.input}>
-              <Text style={styles.inputText}>{phone}</Text>
-            </View>
+            <TextInput
+              value={phone}
+              onChangeText={setPhone}
+              style={[styles.input, { paddingVertical: 12 }]}
+              placeholder="Số điện thoại"
+              keyboardType="phone-pad"
+            />
           </View>
         </View>
 
