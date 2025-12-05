@@ -1,16 +1,21 @@
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Fonts } from '@/constants/theme';
 import { useCart } from '@/contexts/CartContext';
-import { Image } from 'expo-image';
+import { useFavorites } from '@/contexts/FavoritesContext';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { ShoppingCart as CartIcon, Trash2 } from 'lucide-react-native';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { ArrowLeft, Gift, Home, Minus, Plus, ShoppingCart, Trash2 } from 'lucide-react-native';
+import { useState } from 'react';
+import { Alert, Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
-export default function Cart() {
-  const { cart, removeFromCart, updateQty } = useCart();
+const SHIPPING_FEE = 15000;
+const DISCOUNT_VOUCHER = 50000;
+
+export default function CartScreen() {
+  const { cart, removeFromCart, updateQty, setSelectedCheckoutItems } = useCart();
+  const { addFavorite } = useFavorites();
   const router = useRouter();
+  const [selectedVoucher, setSelectedVoucher] = useState<string | null>(null);
+  const [selectAll, setSelectAll] = useState(false);
+  const [selectedItems, setSelectedItems] = useState<number[]>([]);
 
   const increase = (id: number) => {
     const item = cart.find(item => item.id === id);
@@ -26,266 +31,245 @@ export default function Cart() {
     }
   };
 
-  const totalPrice = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+  const toggleSelectItem = (id: number) => {
+    if (selectedItems.includes(id)) {
+      setSelectedItems(selectedItems.filter(itemId => itemId !== id));
+    } else {
+      setSelectedItems([...selectedItems, id]);
+    }
+  };
+
+  const toggleSelectAll = () => {
+    if (selectAll) {
+      setSelectedItems([]);
+      setSelectAll(false);
+    } else {
+      setSelectedItems(cart.map(item => item.id));
+      setSelectAll(true);
+    }
+  };
+
+  const selectedCartItems = cart.filter(item => selectedItems.includes(item.id));
+  const totalPrice = selectedCartItems.reduce((sum, item) => sum + item.price * item.qty, 0);
+  const discount = selectedVoucher ? DISCOUNT_VOUCHER : 0;
+  const shippingFee = totalPrice > 500000 ? 0 : SHIPPING_FEE;
+  const totalPayment = totalPrice - discount + shippingFee;
   const itemCount = cart.reduce((count, item) => count + item.qty, 0);
 
+  // Empty State
   if (!cart || cart.length === 0) {
     return (
-      <ParallaxScrollView
-        headerBackgroundColor={{ light: '#FFDCE1', dark: '#242222' }}
-        headerImage={
-          <View style={{ alignItems: 'center' as const, paddingVertical: 30 }}>
-            <CartIcon size={80} color="#ff6699" />
+      <LinearGradient colors={["#ff6b9d", "#c44569"]} style={{ flex: 1 }}>
+        <View style={{ paddingHorizontal: 16, paddingTop: 44, paddingBottom: 20 }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <TouchableOpacity onPress={() => router.back()}>
+              <ArrowLeft size={24} color="#fff" strokeWidth={2} />
+            </TouchableOpacity>
+            <Text style={{ fontSize: 18, fontWeight: '800', color: '#fff' }}>Giỏ Hàng</Text>
+            <TouchableOpacity onPress={() => router.push('/(tabs)')}>
+              <Home size={24} color="#fff" strokeWidth={2} />
+            </TouchableOpacity>
           </View>
-        }
-      >
-        <ThemedView style={styles.emptyContainer}>
-          <CartIcon size={100} color="#ff6699" style={{ opacity: 0.5, marginBottom: 20 }} />
-          <ThemedText type="title" style={styles.emptyTitle}>
-            Giỏ hàng trống
-          </ThemedText>
-          <ThemedText style={styles.emptyText}>
-            Hãy thêm một số sản phẩm để tiếp tục mua sắm
-          </ThemedText>
-        </ThemedView>
-      </ParallaxScrollView>
+        </View>
+
+        <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 16 }}>
+          <ShoppingCart size={80} color="#ffffff60" strokeWidth={1} />
+          <Text style={{ fontSize: 18, fontWeight: '800', color: '#fff', marginTop: 20 }}>Giỏ hàng của bạn đang trống</Text>
+          <Text style={{ fontSize: 14, color: '#ffffff80', marginTop: 8, textAlign: 'center' }}>Hãy thêm một số sản phẩm để tiếp tục mua sắm</Text>
+          <TouchableOpacity 
+            style={{ marginTop: 32, backgroundColor: '#fff', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12 }}
+            onPress={() => router.push('/(tabs)')}
+          >
+            <Text style={{ fontSize: 15, fontWeight: '700', color: '#ff6b9d' }}>Mua sắm ngay</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </LinearGradient>
     );
   }
 
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#FFE8ED', dark: '#1a1a1a' }}
-      headerImage={
-        <View style={styles.headerWrapper}>
-          <CartIcon size={60} color="#ff6699" />
-          <ThemedText type="subtitle" style={styles.headerCount}>
-            {itemCount} sản phẩm
-          </ThemedText>
-        </View>
-      }
-    >
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title" style={{ fontFamily: Fonts.rounded }}>
-          Giỏ hàng của bạn
-        </ThemedText>
-      </ThemedView>
-
-      {/* CART LIST */}
-      <View style={styles.cartList}>
-        {cart.map((item, index) => (
-          <View key={item.id} style={styles.cartItemWrapper}>
-            <ThemedView style={styles.cartItem}>
-              <Image source={item.img} style={styles.image} />
-              <View style={{ flex: 1 }}>
-                <ThemedText type="defaultSemiBold" style={styles.itemName}>
-                  {item.name}
-                </ThemedText>
-                <ThemedText style={styles.itemPrice}>
-                  ₫{item.price.toLocaleString('vi-VN')}
-                </ThemedText>
-
-                {/* Quantity */}
-                <View style={styles.qtyContainer}>
-                  <TouchableOpacity onPress={() => decrease(item.id)} style={styles.qtyBtn}>
-                    <ThemedText style={styles.qtyBtnText}>−</ThemedText>
-                  </TouchableOpacity>
-                  <ThemedText style={styles.qtyText}>{item.qty}</ThemedText>
-                  <TouchableOpacity onPress={() => increase(item.id)} style={styles.qtyBtn}>
-                    <ThemedText style={styles.qtyBtnText}>+</ThemedText>
-                  </TouchableOpacity>
-                  <ThemedText style={styles.subtotal}>
-                    = ₫{(item.price * item.qty).toLocaleString('vi-VN')}
-                  </ThemedText>
-                </View>
-              </View>
-              <TouchableOpacity onPress={() => removeFromCart(item.id)} style={styles.deleteBtn}>
-                <Trash2 size={18} color="#ff6699" />
-              </TouchableOpacity>
-            </ThemedView>
+    <View style={{ flex: 1, backgroundColor: '#faf9f8' }}>
+      {/* ====== HEADER ====== */}
+      <LinearGradient
+        colors={["#ff6b9d", "#c44569"]}
+        style={{ paddingHorizontal: 16, paddingTop: 44, paddingBottom: 16 }}
+      >
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <TouchableOpacity onPress={() => router.back()}>
+            <ArrowLeft size={24} color="#fff" strokeWidth={2} />
+          </TouchableOpacity>
+          <View>
+            <Text style={{ fontSize: 18, fontWeight: '800', color: '#fff' }}>Giỏ Hàng</Text>
+            <Text style={{ fontSize: 11, color: '#ffffff80', marginTop: 2 }}>{itemCount} sản phẩm</Text>
           </View>
-        ))}
-      </View>
-
-      {/* TOTAL */}
-      <ThemedView style={styles.totalBox}>
-        <View>
-          <ThemedText style={styles.totalLabel}>Tổng tiền</ThemedText>
-          <ThemedText type="title" style={styles.totalPrice}>
-            ₫{totalPrice.toLocaleString('vi-VN')}
-          </ThemedText>
+          <TouchableOpacity onPress={() => router.push('/(tabs)')}>
+            <Home size={24} color="#fff" strokeWidth={2} />
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity style={styles.checkoutBtn} onPress={() => {
-          // Navigate to Account tab first, then open checkout modal
-          router.push('/Account/checkout');
-        }}>
-          <CartIcon size={20} color="#fff" />
-          <ThemedText style={styles.checkoutText}>Thanh toán</ThemedText>
+      </LinearGradient>
+
+      <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
+        {/* ====== CART ITEMS ====== */}
+        <View style={{ paddingHorizontal: 16, paddingTop: 16 }}>
+          {cart.map((item) => (
+            <View key={item.id} style={{ marginBottom: 12, backgroundColor: '#fff', borderRadius: 14, overflow: 'hidden', shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 }}>
+              <View style={{ flexDirection: 'row', padding: 12, gap: 12 }}>
+                {/* Checkbox */}
+                <TouchableOpacity 
+                  style={{ width: 24, height: 24, borderRadius: 6, borderWidth: 2, borderColor: '#ff6b9d', justifyContent: 'center', alignItems: 'center', marginTop: 4 }}
+                  onPress={() => toggleSelectItem(item.id)}
+                >
+                  {selectedItems.includes(item.id) && (
+                    <View style={{ width: 16, height: 16, borderRadius: 4, backgroundColor: '#ff6b9d' }} />
+                  )}
+                </TouchableOpacity>
+
+                {/* Product Image */}
+                <Image source={item.img} style={{ width: 70, height: 70, borderRadius: 10 }} />
+
+                {/* Product Info */}
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#333', marginBottom: 4 }} numberOfLines={2}>{item.name}</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#ff6b9d' }}>{item.price.toLocaleString('vi-VN')}đ</Text>
+                    <Text style={{ fontSize: 10, color: '#999' }}>x{item.qty}</Text>
+                  </View>
+
+                  {/* Quantity Controls */}
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <TouchableOpacity 
+                      style={{ width: 24, height: 24, borderRadius: 6, backgroundColor: '#ffe8f0', justifyContent: 'center', alignItems: 'center' }}
+                      onPress={() => decrease(item.id)}
+                    >
+                      <Minus size={14} color="#ff6b9d" strokeWidth={2} />
+                    </TouchableOpacity>
+                    <Text style={{ width: 30, textAlign: 'center', fontSize: 12, fontWeight: '600' }}>{item.qty}</Text>
+                    <TouchableOpacity 
+                      style={{ width: 24, height: 24, borderRadius: 6, backgroundColor: '#ffe8f0', justifyContent: 'center', alignItems: 'center' }}
+                      onPress={() => increase(item.id)}
+                    >
+                      <Plus size={14} color="#ff6b9d" strokeWidth={2} />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                {/* Delete Button */}
+                <TouchableOpacity onPress={() => removeFromCart(item.id)}>
+                  <Trash2 size={18} color="#ff6b9d" />
+                </TouchableOpacity>
+              </View>
+            </View>
+          ))}
+        </View>
+
+        {/* ====== VOUCHER SECTION ====== */}
+        <View style={{ marginHorizontal: 16, marginTop: 20 }}>
+          <TouchableOpacity 
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#fff', padding: 14, borderRadius: 12, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 }}
+            onPress={() => {
+              Alert.alert('Chọn Voucher', 'Các mã giảm giá có sẵn', [
+                { text: 'SAVE50K (-50.000đ)', onPress: () => setSelectedVoucher('SAVE50K') },
+                { text: 'FREESHIP (Miễn ship)', onPress: () => setSelectedVoucher('FREESHIP') },
+                { text: 'Hủy', onPress: () => setSelectedVoucher(null) },
+              ]);
+            }}
+          >
+            <Gift size={20} color="#ff6b9d" />
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 13, fontWeight: '600', color: '#333' }}>Chọn Voucher</Text>
+              <Text style={{ fontSize: 11, color: '#999', marginTop: 2 }}>{selectedVoucher || 'Không có mã nào được chọn'}</Text>
+            </View>
+            <Text style={{ fontSize: 12, fontWeight: '600', color: '#ff6b9d' }}>›</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* ====== SHIPPING INFO ====== */}
+        <View style={{ marginHorizontal: 16, marginTop: 16 }}>
+          <Text style={{ fontSize: 14, fontWeight: '700', color: '#333', marginBottom: 10 }}>Thông tin giao hàng</Text>
+          <View style={{ backgroundColor: '#fff', padding: 14, borderRadius: 12, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 }}>
+            <Text style={{ fontSize: 12, color: '#666', marginBottom: 8 }}>📍 Giao tới: Nhà riêng</Text>
+            <Text style={{ fontSize: 12, color: '#666', marginBottom: 8 }}>🚚 Phương thức: Giao hàng tiêu chuẩn</Text>
+            <Text style={{ fontSize: 12, color: '#666' }}>📅 Dự kiến: 2-3 ngày làm việc</Text>
+          </View>
+        </View>
+
+        {/* ====== ORDER SUMMARY ====== */}
+        <View style={{ marginHorizontal: 16, marginTop: 16, marginBottom: 200 }}>
+          <Text style={{ fontSize: 14, fontWeight: '700', color: '#333', marginBottom: 10 }}>Tổng kết thanh toán</Text>
+          <View style={{ backgroundColor: '#fff', padding: 16, borderRadius: 12, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
+              <Text style={{ fontSize: 13, color: '#666' }}>Tổng tiền hàng</Text>
+              <Text style={{ fontSize: 13, fontWeight: '600', color: '#333' }}>{totalPrice.toLocaleString('vi-VN')}đ</Text>
+            </View>
+            {discount > 0 && (
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
+                <Text style={{ fontSize: 13, color: '#666' }}>Giảm giá</Text>
+                <Text style={{ fontSize: 13, fontWeight: '600', color: '#27ae60' }}>-{discount.toLocaleString('vi-VN')}đ</Text>
+              </View>
+            )}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: '#eee' }}>
+              <Text style={{ fontSize: 13, color: '#666' }}>Phí vận chuyển</Text>
+              <Text style={{ fontSize: 13, fontWeight: '600', color: shippingFee === 0 ? '#27ae60' : '#333' }}>
+                {shippingFee === 0 ? 'Miễn phí' : shippingFee.toLocaleString('vi-VN') + 'đ'}
+              </Text>
+            </View>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingTop: 12 }}>
+              <Text style={{ fontSize: 15, fontWeight: '700', color: '#333' }}>Tổng thanh toán</Text>
+              <Text style={{ fontSize: 18, fontWeight: '800', color: '#ff6b9d' }}>{totalPayment.toLocaleString('vi-VN')}đ</Text>
+            </View>
+            {discount > 0 && (
+              <Text style={{ fontSize: 11, color: '#27ae60', marginTop: 10 }}>🎉 Bạn tiết kiệm được {discount.toLocaleString('vi-VN')}đ</Text>
+            )}
+          </View>
+        </View>
+      </ScrollView>
+
+      {/* ====== BOTTOM CHECKOUT BAR ====== */}
+      <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#eee', paddingHorizontal: 16, paddingVertical: 12, paddingBottom: 20 }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <TouchableOpacity 
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
+            onPress={toggleSelectAll}
+          >
+            <View 
+              style={{ width: 20, height: 20, borderRadius: 4, borderWidth: 2, borderColor: '#ff6b9d', justifyContent: 'center', alignItems: 'center' }}
+            >
+              {selectAll && <View style={{ width: 12, height: 12, borderRadius: 2, backgroundColor: '#ff6b9d' }} />}
+            </View>
+            <Text style={{ fontSize: 13, fontWeight: '600', color: '#333' }}>Chọn tất cả</Text>
+          </TouchableOpacity>
+          <Text style={{ fontSize: 15, fontWeight: '700', color: '#ff6b9d' }}>{selectedItems.length > 0 ? totalPayment.toLocaleString('vi-VN') : '0'}đ</Text>
+        </View>
+
+        <TouchableOpacity 
+          style={{ 
+            backgroundColor: selectedItems.length > 0 ? '#ff6b9d' : '#ccc', 
+            paddingVertical: 14, 
+            borderRadius: 10, 
+            alignItems: 'center' 
+          }}
+          onPress={() => {
+            if (selectedItems.length === 0) {
+              Alert.alert('Thông báo', 'Vui lòng chọn ít nhất 1 sản phẩm');
+              return;
+            }
+            Alert.alert('Thanh toán', `Thanh toán ${totalPayment.toLocaleString('vi-VN')}đ?`, [
+              { text: 'Hủy' },
+              { 
+                text: 'Xác nhận', 
+                onPress: () => {
+                  setSelectedCheckoutItems(selectedCartItems);
+                  router.push('/user/checkout' as any);
+                }
+              }
+            ]);
+          }}
+          disabled={selectedItems.length === 0}
+        >
+          <Text style={{ fontSize: 15, fontWeight: '700', color: '#fff' }}>Thanh toán</Text>
         </TouchableOpacity>
-      </ThemedView>
-    </ParallaxScrollView>
+      </View>
+    </View>
   );
 }
 
-const styles = StyleSheet.create({
-  emptyContainer: {
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
-    paddingVertical: 60,
-    paddingHorizontal: 20,
-  },
-  emptyTitle: {
-    fontFamily: Fonts.rounded,
-    marginBottom: 12,
-  },
-  emptyText: {
-    textAlign: 'center',
-    opacity: 0.6,
-    fontSize: 14,
-    paddingHorizontal: 20,
-  },
-  headerWrapper: {
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
-    paddingVertical: 40,
-  },
-  headerCount: {
-    marginTop: 8,
-    color: '#ff6699',
-  },
-  titleContainer: {
-    alignItems: 'center' as const,
-    marginBottom: 20,
-    paddingHorizontal: 20,
-  },
-
-  cartList: {
-    marginBottom: 20,
-  },
-
-  cartItemWrapper: {
-    marginHorizontal: 12,
-    marginVertical: 8,
-  },
-
-  cartItem: {
-    flexDirection: 'row' as const,
-    alignItems: 'flex-start' as const,
-    padding: 16,
-    borderRadius: 18,
-    backgroundColor: '#fff',
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-
-  image: {
-    width: 80,
-    height: 80,
-    borderRadius: 14,
-    marginRight: 14,
-  },
-
-  itemName: {
-    fontSize: 15,
-    marginBottom: 4,
-  },
-
-  itemPrice: {
-    color: '#ff6699',
-    fontSize: 13,
-    fontWeight: '700' as const,
-    marginBottom: 8,
-  },
-
-  qtyContainer: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    gap: 8,
-  },
-
-  qtyBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: '#FFE8ED',
-    justifyContent: 'center' as const,
-    alignItems: 'center' as const,
-  },
-
-  qtyBtnText: {
-    fontSize: 18,
-    fontWeight: '600' as const,
-    color: '#ff6699',
-  },
-
-  qtyText: {
-    marginHorizontal: 6,
-    fontSize: 15,
-    fontWeight: '600' as const,
-  },
-
-  subtotal: {
-    fontSize: 12,
-    fontWeight: '600' as const,
-    color: '#666',
-  },
-
-  deleteBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: '#FFE8ED',
-    justifyContent: 'center' as const,
-    alignItems: 'center' as const,
-  },
-
-  totalBox: {
-    flexDirection: 'row' as const,
-    justifyContent: 'space-between' as const,
-    alignItems: 'center' as const,
-    padding: 20,
-    marginHorizontal: 12,
-    marginTop: 24,
-    marginBottom: 20,
-    borderRadius: 18,
-    backgroundColor: '#FFE8ED',
-    shadowColor: '#ff6699',
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    elevation: 5,
-  },
-
-  totalLabel: {
-    fontSize: 13,
-    opacity: 0.7,
-    marginBottom: 4,
-  },
-
-  totalPrice: {
-    color: '#ff6699',
-    fontSize: 22,
-    fontWeight: '700' as const,
-  },
-
-  checkoutBtn: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
-    gap: 8,
-    backgroundColor: '#ff6699',
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    borderRadius: 12,
-    shadowColor: '#ff6699',
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 6,
-  },
-
-  checkoutText: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '700' as const,
-  },
-});

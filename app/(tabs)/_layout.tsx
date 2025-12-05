@@ -38,7 +38,7 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="Account"
+        name="Profile"
         options={{
           title: 'Tài khoản',
           tabBarIcon: ({ color }) => <User size={28} color={color} />,

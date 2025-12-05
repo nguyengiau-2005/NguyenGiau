@@ -25,7 +25,14 @@ export default function LoginScreen() {
     setIsLoading(true);
     try {
       await login(email, password);
-      // Navigation will happen automatically via RootLayout
+      Alert.alert('Thành công', 'Đăng nhập thành công', [
+        {
+          text: 'OK',
+          onPress: () => {
+            router.replace('/');
+          },
+        },
+      ]);
     } catch (error) {
       Alert.alert('Lỗi', 'Đăng nhập thất bại. Vui lòng thử lại.');
     } finally {

@@ -1,13 +1,10 @@
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Fonts } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { ChevronRight, CreditCard, Edit3, History, LogOut, MapPin, User, Wallet } from 'lucide-react-native';
-import { Alert, Image, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { AlertCircle, Bell, ChevronRight, CreditCard, Edit3, FileText, Gift, Globe, Heart, HelpCircle, History, Info, Lock, LogOut, MapPin, MessageSquare, Moon, Package, Settings, ShoppingCart, Wallet } from 'lucide-react-native';
+import { Alert, Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
-export default function Profile() {
+export default function ProfileScreen() {
   const { user, logout } = useAuth();
   const router = useRouter();
 
@@ -19,284 +16,308 @@ export default function Profile() {
         style: 'destructive',
         onPress: () => {
           logout();
+          Alert.alert('Đã đăng xuất', 'Bạn đã đăng xuất thành công', [
+            {
+              text: 'OK',
+              onPress: () => {
+                router.replace('/auth/login');
+              },
+            },
+          ]);
         },
       },
     ]);
   };
 
+  // Not logged in state
   if (!user) {
     return (
-      <ParallaxScrollView
-        headerBackgroundColor={{ light: '#FFE8ED', dark: '#1a1a1a' }}
-        headerImage={
-          <View style={styles.headerWrapper}>
-            <User size={60} color="#ff6699" />
-            <ThemedText type="subtitle" style={styles.headerTitle}>
-              Tài Khoản
-            </ThemedText>
+      <LinearGradient colors={["#ff6b9d", "#c44569"]} style={{ flex: 1 }}>
+        <View style={{ paddingHorizontal: 16, paddingTop: 44, paddingBottom: 16 }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Text style={{ fontSize: 18, fontWeight: '800', color: '#fff' }}>Tài Khoản</Text>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <TouchableOpacity>
+                <Settings size={24} color="#fff" strokeWidth={2} />
+              </TouchableOpacity>
+              <TouchableOpacity>
+                <Bell size={24} color="#fff" strokeWidth={2} />
+              </TouchableOpacity>
+            </View>
           </View>
-        }
-      >
-        <ThemedView style={styles.container}>
-          <ThemedText type="title" style={{ marginBottom: 12 }}>Bạn chưa đăng nhập</ThemedText>
-          <ThemedText style={{ marginBottom: 20 }}>Vui lòng đăng nhập hoặc đăng ký để tiếp tục.</ThemedText>
+        </View>
 
-          <TouchableOpacity style={[styles.logoutBtn, { marginBottom: 12 }]} onPress={() => router.push('/auth/login')}>
-            <ThemedText style={styles.logoutText}>Đăng nhập</ThemedText>
-          </TouchableOpacity>
+        <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingHorizontal: 20 }}>
+          <View style={{ alignItems: 'center', marginBottom: 40 }}>
+            <View style={{ width: 100, height: 100, borderRadius: 50, backgroundColor: '#ffffff30', justifyContent: 'center', alignItems: 'center', marginBottom: 20 }}>
+              <Edit3 size={50} color="#ffffff60" strokeWidth={1} />
+            </View>
+            <Text style={{ fontSize: 20, fontWeight: '800', color: '#fff', marginBottom: 12 }}>Bạn chưa đăng nhập</Text>
+            <Text style={{ fontSize: 14, color: '#ffffff80', textAlign: 'center', marginBottom: 32 }}>Đăng nhập để quản lý đơn hàng, yêu thích và nhận ưu đãi đặc biệt</Text>
+            
+            <TouchableOpacity 
+              style={{ width: '100%', backgroundColor: '#fff', paddingVertical: 14, borderRadius: 12, alignItems: 'center', marginBottom: 12 }}
+              onPress={() => router.push('/auth/login')}
+            >
+              <Text style={{ fontSize: 15, fontWeight: '700', color: '#ff6b9d' }}>Đăng Nhập</Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.logoutBtn, { backgroundColor: '#fff', borderWidth: 1, borderColor: '#ff6699' }]} onPress={() => router.push('/auth/signup')}>
-            <ThemedText style={{ color: '#ff6699', fontWeight: '700' }}>Đăng ký</ThemedText>
-          </TouchableOpacity>
-        </ThemedView>
-      </ParallaxScrollView>
+            <TouchableOpacity 
+              style={{ width: '100%', backgroundColor: 'transparent', borderWidth: 2, borderColor: '#fff', paddingVertical: 12, borderRadius: 12, alignItems: 'center' }}
+              onPress={() => router.push('/auth/signup')}
+            >
+              <Text style={{ fontSize: 15, fontWeight: '700', color: '#fff' }}>Đăng Ký</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </LinearGradient>
     );
   }
 
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#FFE8ED', dark: '#1a1a1a' }}
-      headerImage={
-        <View style={styles.headerWrapper}>
-          <TouchableOpacity onPress={() => router.push('/Account/edit-profile')} style={styles.avatarTouchable}>
-            <Image source={{ uri: user.avatar }} style={styles.avatar} />
-            <View style={styles.editBadge}>
-              <Edit3 size={16} color="#fff" />
-            </View>
-          </TouchableOpacity>
-          <ThemedText type="subtitle" style={styles.headerTitle}>
-            {user.fullName}
-          </ThemedText>
-        </View>
-      }
-    >
-      <ThemedView style={styles.container}>
-        <ThemedView style={styles.infoCard}>
-          <View style={styles.infoRow}>
-            <View style={styles.infoIcon}>
-              <ThemedText style={styles.emailIcon}>@</ThemedText>
-            </View>
-            <View style={{ flex: 1 }}>
-              <ThemedText style={styles.infoLabel}>Email</ThemedText>
-              <ThemedText type="defaultSemiBold" numberOfLines={1}>
-                {user.email}
-              </ThemedText>
-            </View>
+    <View style={{ flex: 1, backgroundColor: '#faf9f8' }}>
+      {/* ====== HEADER ====== */}
+      <LinearGradient
+        colors={["#ff6b9d", "#c44569"]}
+        style={{ paddingHorizontal: 16, paddingTop: 44, paddingBottom: 20 }}
+      >
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <Text style={{ fontSize: 18, fontWeight: '800', color: '#fff' }}>Tài Khoản</Text>
+          <View style={{ flexDirection: 'row', gap: 12 }}>
+            <TouchableOpacity style={{ backgroundColor: '#ffffff20', padding: 8, borderRadius: 12 }}>
+              <Settings size={20} color="#fff" strokeWidth={2} />
+            </TouchableOpacity>
+            <TouchableOpacity style={{ backgroundColor: '#ffffff20', padding: 8, borderRadius: 12 }}>
+              <Bell size={20} color="#fff" strokeWidth={2} />
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={{ backgroundColor: '#ffffff20', padding: 8, borderRadius: 12 }}
+              onPress={() => router.push('/(tabs)/Cart')}
+            >
+              <ShoppingCart size={20} color="#fff" strokeWidth={2} />
+            </TouchableOpacity>
           </View>
+        </View>
+      </LinearGradient>
 
-          {user.phone && (
-            <>
-              <View style={styles.divider} />
-              <View style={styles.infoRow}>
-                <View style={styles.infoIcon}>
-                  <ThemedText style={styles.phoneIcon}>☎</ThemedText>
+      <ScrollView showsVerticalScrollIndicator={false}>
+        {/* ====== USER INFO CARD ====== */}
+        <View style={{ marginHorizontal: 16, marginTop: 16 }}>
+          <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 16, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 8, elevation: 3 }}>
+            <View style={{ flexDirection: 'row', gap: 12, marginBottom: 16 }}>
+              <TouchableOpacity 
+                style={{ position: 'relative' }}
+                onPress={() => router.push('/user/edit-profile' as any)}
+              >
+                <Image 
+                  source={{ uri: user.avatar || 'https://via.placeholder.com/80' }} 
+                  style={{ width: 70, height: 70, borderRadius: 35, borderWidth: 3, borderColor: '#ff6b9d' }} 
+                />
+                <View style={{ position: 'absolute', bottom: 0, right: 0, backgroundColor: '#ff6b9d', width: 24, height: 24, borderRadius: 12, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#fff' }}>
+                  <Edit3 size={12} color="#fff" strokeWidth={2} />
                 </View>
-                <View style={{ flex: 1 }}>
-                  <ThemedText style={styles.infoLabel}>Số điện thoại</ThemedText>
-                  <ThemedText type="defaultSemiBold">{user.phone}</ThemedText>
+              </TouchableOpacity>
+
+              <View style={{ flex: 1, justifyContent: 'space-around' }}>
+                <View>
+                  <Text style={{ fontSize: 16, fontWeight: '800', color: '#333', marginBottom: 2 }}>{user.fullName}</Text>
+                  <Text style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>{user.email}</Text>
+                  {user.phone && <Text style={{ fontSize: 12, color: '#999' }}>{user.phone}</Text>}
+                </View>
+                <View style={{ backgroundColor: '#ffe8f0', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, alignSelf: 'flex-start' }}>
+                  <Text style={{ fontSize: 11, fontWeight: '600', color: '#ff6b9d' }}>👑 Thành viên</Text>
                 </View>
               </View>
-            </>
-          )}
-        </ThemedView>
+            </View>
 
-        <ThemedText style={styles.menuTitle}>Quản lý tài khoản</ThemedText>
+            <TouchableOpacity 
+              style={{ backgroundColor: '#ff6b9d', paddingVertical: 10, borderRadius: 10, alignItems: 'center' }}
+              onPress={() => router.push('/user/edit-profile' as any)}
+            >
+              <Text style={{ fontSize: 13, fontWeight: '700', color: '#fff' }}>Chỉnh Sửa Hồ Sơ</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
 
-        <TouchableOpacity
-          style={styles.menuItem}
-          onPress={() => router.push('/Account/edit-profile')}
-        >
-          <View style={styles.menuIcon}>
-            <Edit3 size={20} color="#ff6699" />
-          </View>
-          <View style={{ flex: 1 }}>
-            <ThemedText type="defaultSemiBold">Chỉnh sửa hồ sơ</ThemedText>
-            <ThemedText style={styles.menuSubtitle}>Cập nhật thông tin cá nhân</ThemedText>
-          </View>
-          <ChevronRight size={20} color="#999" />
-        </TouchableOpacity>
+        {/* ====== QUICK ACTIONS ====== */}
+        <View style={{ marginHorizontal: 16, marginTop: 20 }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 12 }}>
+            <TouchableOpacity 
+              style={{ flex: 1, backgroundColor: '#fff', padding: 14, borderRadius: 12, alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 }}
+              onPress={() => router.push('/user/order-history' as any)}
+            >
+              <Package size={28} color="#ff6b9d" strokeWidth={1.5} />
+              <Text style={{ fontSize: 11, fontWeight: '600', color: '#333', marginTop: 6, textAlign: 'center' }}>Đơn hàng</Text>
+            </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.menuItem}
-          onPress={() => router.push('/Account/address')}
-        >
-          <View style={styles.menuIcon}>
-            <MapPin size={20} color="#ff6699" />
-          </View>
-          <View style={{ flex: 1 }}>
-            <ThemedText type="defaultSemiBold">Địa chỉ giao hàng</ThemedText>
-            <ThemedText style={styles.menuSubtitle}>Quản lý địa chỉ của bạn</ThemedText>
-          </View>
-          <ChevronRight size={20} color="#999" />
-        </TouchableOpacity>
+            <TouchableOpacity 
+              style={{ flex: 1, backgroundColor: '#fff', padding: 14, borderRadius: 12, alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 }}
+              onPress={() => Alert.alert('Ví', 'Số dư: 0đ')}
+            >
+              <Wallet size={28} color="#ff6b9d" strokeWidth={1.5} />
+              <Text style={{ fontSize: 11, fontWeight: '600', color: '#333', marginTop: 6, textAlign: 'center' }}>Ví</Text>
+            </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.menuItem}
-          onPress={() => router.push('/Account/payment')}
-        >
-          <View style={styles.menuIcon}>
-            <Wallet size={20} color="#ff6699" />
-          </View>
-          <View style={{ flex: 1 }}>
-            <ThemedText type="defaultSemiBold">Phương thức thanh toán</ThemedText>
-            <ThemedText style={styles.menuSubtitle}>Liên kết ngân hàng & ví</ThemedText>
-          </View>
-          <ChevronRight size={20} color="#999" />
-        </TouchableOpacity>
+            <TouchableOpacity 
+              style={{ flex: 1, backgroundColor: '#fff', padding: 14, borderRadius: 12, alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 }}
+              onPress={() => Alert.alert('Voucher', 'Bạn có 0 voucher')}
+            >
+              <Gift size={28} color="#ff6b9d" strokeWidth={1.5} />
+              <Text style={{ fontSize: 11, fontWeight: '600', color: '#333', marginTop: 6, textAlign: 'center' }}>Voucher</Text>
+            </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.menuItem}
-          onPress={() => router.push('/Account/order-history')}
-        >
-          <View style={styles.menuIcon}>
-            <History size={20} color="#ff6699" />
+            <TouchableOpacity 
+              style={{ flex: 1, backgroundColor: '#fff', padding: 14, borderRadius: 12, alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 }}
+              onPress={() => router.push('/(tabs)/Favorites')}
+            >
+              <Heart size={28} color="#ff6b9d" strokeWidth={1.5} />
+              <Text style={{ fontSize: 11, fontWeight: '600', color: '#333', marginTop: 6, textAlign: 'center' }}>Yêu thích</Text>
+            </TouchableOpacity>
           </View>
-          <View style={{ flex: 1 }}>
-            <ThemedText type="defaultSemiBold">Lịch sử mua hàng</ThemedText>
-            <ThemedText style={styles.menuSubtitle}>Xem các đơn hàng của bạn</ThemedText>
-          </View>
-          <ChevronRight size={20} color="#999" />
-        </TouchableOpacity>
+        </View>
 
-        <TouchableOpacity
-          style={styles.menuItem}
-          onPress={() => router.push('/Account/checkout')}
-        >
-          <View style={styles.menuIcon}>
-            <CreditCard size={20} color="#ff6699" />
+        {/* ====== ORDER STATUS ====== */}
+        <View style={{ marginHorizontal: 16, marginTop: 20 }}>
+          <Text style={{ fontSize: 14, fontWeight: '700', color: '#333', marginBottom: 12 }}>Trạng thái đơn hàng</Text>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 8 }}>
+            {[
+              { label: 'Chờ xác nhận', icon: '📋', color: '#ffa726' },
+              { label: 'Chờ lấy', icon: '📦', color: '#42a5f5' },
+              { label: 'Đang giao', icon: '🚚', color: '#66bb6a' },
+              { label: 'Đã giao', icon: '✓', color: '#29b6f6' },
+              { label: 'Đã hủy', icon: '✕', color: '#ef5350' }
+            ].map((status, idx) => (
+              <TouchableOpacity
+                key={idx}
+                style={{ flex: 1, backgroundColor: '#fff', padding: 12, borderRadius: 10, alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 3, elevation: 1 }}
+                onPress={() => Alert.alert(status.label, 'Không có đơn hàng')}
+              >
+                <Text style={{ fontSize: 18, marginBottom: 4 }}>{status.icon}</Text>
+                <Text style={{ fontSize: 10, fontWeight: '600', color: '#333', textAlign: 'center' }}>{status.label}</Text>
+              </TouchableOpacity>
+            ))}
           </View>
-          <View style={{ flex: 1 }}>
-            <ThemedText type="defaultSemiBold">Thanh toán</ThemedText>
-            <ThemedText style={styles.menuSubtitle}>Xem giỏ hàng và thanh toán</ThemedText>
-          </View>
-          <ChevronRight size={20} color="#999" />
-        </TouchableOpacity>
+        </View>
 
-        <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
-          <LogOut size={20} color="#fff" />
-          <ThemedText style={styles.logoutText}>Đăng xuất</ThemedText>
-        </TouchableOpacity>
-      </ThemedView>
-    </ParallaxScrollView>
+        {/* ====== ACCOUNT SECTION ====== */}
+        <View style={{ marginHorizontal: 16, marginTop: 20 }}>
+          <Text style={{ fontSize: 14, fontWeight: '700', color: '#333', marginBottom: 10 }}>Quản lý tài khoản</Text>
+
+          {[
+            { icon: Edit3, label: 'Thông tin cá nhân', route: '/user/edit-profile' as any },
+            { icon: Lock, label: 'Đổi mật khẩu', route: null },
+            { icon: MapPin, label: 'Địa chỉ giao hàng', route: '/user/address' as any },
+            { icon: CreditCard, label: 'Phương thức thanh toán', route: '/user/payment' as any }
+          ].map((item, idx) => (
+            <TouchableOpacity
+              key={idx}
+              style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', padding: 14, borderRadius: 12, marginBottom: 10, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 3, elevation: 1 }}
+              onPress={() => item.route ? router.push(item.route) : Alert.alert(item.label, 'Tính năng đang phát triển')}
+            >
+              <View style={{ width: 40, height: 40, borderRadius: 10, backgroundColor: '#ffe8f0', justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
+                <item.icon size={20} color="#ff6b9d" strokeWidth={1.5} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 13, fontWeight: '600', color: '#333' }}>{item.label}</Text>
+              </View>
+              <ChevronRight size={20} color="#ccc" strokeWidth={2} />
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* ====== PURCHASE ACTIVITY ====== */}
+        <View style={{ marginHorizontal: 16, marginTop: 20 }}>
+          <Text style={{ fontSize: 14, fontWeight: '700', color: '#333', marginBottom: 10 }}>Hoạt động mua sắm</Text>
+
+          {[
+            { icon: History, label: 'Lịch sử mua hàng', route: '/user/order-history' as any },
+            { icon: FileText, label: 'Đánh giá của tôi', route: null },
+            { icon: AlertCircle, label: 'Đã xem gần đây', route: null }
+          ].map((item, idx) => (
+            <TouchableOpacity
+              key={idx}
+              style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', padding: 14, borderRadius: 12, marginBottom: 10, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 3, elevation: 1 }}
+              onPress={() => item.route ? router.push(item.route) : Alert.alert(item.label, 'Tính năng đang phát triển')}
+            >
+              <View style={{ width: 40, height: 40, borderRadius: 10, backgroundColor: '#ffe8f0', justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
+                <item.icon size={20} color="#ff6b9d" strokeWidth={1.5} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 13, fontWeight: '600', color: '#333' }}>{item.label}</Text>
+              </View>
+              <ChevronRight size={20} color="#ccc" strokeWidth={2} />
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* ====== SUPPORT SECTION ====== */}
+        <View style={{ marginHorizontal: 16, marginTop: 20 }}>
+          <Text style={{ fontSize: 14, fontWeight: '700', color: '#333', marginBottom: 10 }}>Hỗ trợ</Text>
+
+          {[
+            { icon: HelpCircle, label: 'Trung tâm hỗ trợ', route: null },
+            { icon: AlertCircle, label: 'Câu hỏi thường gặp', route: null },
+            { icon: FileText, label: 'Chính sách đổi trả', route: null },
+            { icon: FileText, label: 'Điều khoản dịch vụ', route: null }
+          ].map((item, idx) => (
+            <TouchableOpacity
+              key={idx}
+              style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', padding: 14, borderRadius: 12, marginBottom: 10, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 3, elevation: 1 }}
+              onPress={() => Alert.alert(item.label, 'Tính năng đang phát triển')}
+            >
+              <View style={{ width: 40, height: 40, borderRadius: 10, backgroundColor: '#ffe8f0', justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
+                <item.icon size={20} color="#ff6b9d" strokeWidth={1.5} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 13, fontWeight: '600', color: '#333' }}>{item.label}</Text>
+              </View>
+              <ChevronRight size={20} color="#ccc" strokeWidth={2} />
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* ====== APP SETTINGS ====== */}
+        <View style={{ marginHorizontal: 16, marginTop: 20, marginBottom: 20 }}>
+          <Text style={{ fontSize: 14, fontWeight: '700', color: '#333', marginBottom: 10 }}>Cài đặt & thông tin</Text>
+
+          {[
+            { icon: Info, label: 'Giới thiệu ứng dụng', route: null },
+            { icon: MessageSquare, label: 'Gửi phản hồi', route: null },
+            { icon: Globe, label: 'Ngôn ngữ', subtext: 'Tiếng Việt' },
+            { icon: Moon, label: 'Chế độ tối', subtext: 'Tắt' },
+            { icon: AlertCircle, label: 'Phiên bản ứng dụng', subtext: 'v1.0.0' }
+          ].map((item, idx) => (
+            <TouchableOpacity
+              key={idx}
+              style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', padding: 14, borderRadius: 12, marginBottom: 10, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 3, elevation: 1 }}
+              onPress={() => Alert.alert(item.label, 'Tính năng đang phát triển')}
+            >
+              <View style={{ width: 40, height: 40, borderRadius: 10, backgroundColor: '#ffe8f0', justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
+                <item.icon size={20} color="#ff6b9d" strokeWidth={1.5} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 13, fontWeight: '600', color: '#333' }}>{item.label}</Text>
+                {item.subtext && <Text style={{ fontSize: 11, color: '#999', marginTop: 2 }}>{item.subtext}</Text>}
+              </View>
+              <ChevronRight size={20} color="#ccc" strokeWidth={2} />
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* ====== LOGOUT BUTTON ====== */}
+        <View style={{ marginHorizontal: 16, marginBottom: 40 }}>
+          <TouchableOpacity 
+            style={{ backgroundColor: '#ff3b30', paddingVertical: 14, borderRadius: 12, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, shadowColor: '#ff3b30', shadowOpacity: 0.3, shadowRadius: 8, elevation: 5 }}
+            onPress={handleLogout}
+          >
+            <LogOut size={20} color="#fff" strokeWidth={2} />
+            <Text style={{ fontSize: 15, fontWeight: '700', color: '#fff' }}>Đăng Xuất</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </View>
   );
 }
 
-const styles = StyleSheet.create({
-  headerWrapper: {
-    alignItems: 'center' as const,
-    paddingVertical: 40,
-    gap: 12,
-  },
-  avatarTouchable: {
-    position: 'relative',
-  },
-  avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    borderWidth: 3,
-    borderColor: '#fff',
-  },
-  editBadge: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#ff6699',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#fff',
-  },
-  headerTitle: {
-    color: '#ff6699',
-    fontFamily: Fonts.rounded,
-  },
-  container: {
-    paddingHorizontal: 16,
-    paddingVertical: 20,
-    paddingBottom: 40,
-  },
-  infoCard: {
-    backgroundColor: '#fff',
-    borderRadius: 14,
-    padding: 16,
-    marginBottom: 24,
-  },
-  infoRow: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    gap: 12,
-    paddingVertical: 12,
-  },
-  infoIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    backgroundColor: '#FFE8ED',
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
-  },
-  emailIcon: {
-    fontSize: 20,
-    fontWeight: '600' as const,
-    color: '#ff6699',
-  },
-  phoneIcon: {
-    fontSize: 20,
-    fontWeight: '600' as const,
-    color: '#ff6699',
-  },
-  infoLabel: {
-    color: '#999',
-    fontSize: 12,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#f0f0f0',
-    marginVertical: 12,
-  },
-  menuTitle: {
-    marginBottom: 12,
-    fontSize: 15,
-    fontWeight: '700' as const,
-  },
-  menuItem: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    paddingVertical: 14,
-    paddingHorizontal: 10,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    marginBottom: 12,
-  },
-  menuIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 10,
-    backgroundColor: '#FFE8ED',
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
-    marginRight: 12,
-  },
-  menuSubtitle: {
-    color: '#777',
-    fontSize: 12,
-  },
-  logoutBtn: {
-    marginTop: 12,
-    backgroundColor: '#ff6699',
-    padding: 12,
-    borderRadius: 12,
-    flexDirection: 'row' as const,
-    gap: 8,
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
-  },
-  logoutText: {
-    color: '#fff',
-    fontWeight: '700' as const,
-  },
-});
+
+

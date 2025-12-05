@@ -38,7 +38,15 @@ export default function SignupScreen() {
     setIsLoading(true);
     try {
       await signup(email, password, fullName);
-      // Navigation will happen automatically via RootLayout
+      Alert.alert('Thành công', 'Đăng ký thành công', [
+        {
+          text: 'OK',
+          onPress: () => {
+            // Redirect to login
+            router.replace('/auth/login');
+          },
+        },
+      ]);
     } catch (error) {
       Alert.alert('Lỗi', 'Đăng ký thất bại. Vui lòng thử lại.');
     } finally {

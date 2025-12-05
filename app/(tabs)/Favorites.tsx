@@ -1,26 +1,22 @@
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Fonts } from '@/constants/theme';
 import { useCart } from '@/contexts/CartContext';
 import { useFavorites } from '@/contexts/FavoritesContext';
-import { Image } from 'expo-image';
-import { Heart, ShoppingCart } from 'lucide-react-native';
-import { Alert, FlatList, StyleSheet, TouchableOpacity, View } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
+import { ArrowLeft, Heart, ShoppingCart, Star } from 'lucide-react-native';
+import { useState } from 'react';
+import { Alert, Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
-type FavoriteItem = {
-  id: number;
-  name: string;
-  price: number;
-  rating: number;
-  image: string;
-};
+type SortOption = 'newest' | 'price-low' | 'price-high' | 'popular';
 
-export default function Favorites() {
+export default function FavoritesScreen() {
   const { addToCart } = useCart();
   const { favorites, removeFavorite } = useFavorites();
+  const router = useRouter();
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [sortBy, setSortBy] = useState<SortOption>('newest');
+  const [filteredFavorites, setFilteredFavorites] = useState(favorites);
 
-  const handleAddToCart = (item: FavoriteItem) => {
+  const handleAddToCart = (item: any) => {
     addToCart({
       id: item.id,
       name: item.name,
@@ -31,183 +27,248 @@ export default function Favorites() {
     Alert.alert('Thành công', `${item.name} đã được thêm vào giỏ hàng`);
   };
 
-  const renderFavoriteCard = ({ item }: { item: FavoriteItem }) => (
-    <View style={styles.cardWrapper}>
-      <ThemedView style={styles.card}>
-        <View style={styles.imageContainer}>
-          <Image source={item.image} style={styles.image} />
-          <TouchableOpacity
-            style={styles.favoriteBtn}
-            onPress={() => removeFavorite(item.id)}
-          >
-            <Heart size={20} color="#ff6699" fill="#ff6699" />
-          </TouchableOpacity>
+  const handleSort = (newSort: SortOption) => {
+    setSortBy(newSort);
+    let sorted = [...favorites];
+    
+    switch (newSort) {
+      case 'price-low':
+        sorted.sort((a, b) => a.price - b.price);
+        break;
+      case 'price-high':
+        sorted.sort((a, b) => b.price - a.price);
+        break;
+      case 'popular':
+        sorted.sort((a, b) => b.rating - a.rating);
+        break;
+      default:
+        sorted = favorites;
+    }
+    setFilteredFavorites(sorted);
+  };
+
+  // Render product card for grid view
+  const renderProductCard = (item: any) => (
+    <TouchableOpacity 
+      key={item.id}
+      style={{ 
+        flex: 1, 
+        backgroundColor: '#fff', 
+        borderRadius: 14, 
+        overflow: 'hidden',
+        shadowColor: '#000',
+        shadowOpacity: 0.06,
+        shadowRadius: 4,
+        elevation: 2,
+        margin: 6
+      }}
+    >
+      <View style={{ position: 'relative', height: 160, backgroundColor: '#f5f5f5' }}>
+        <Image source={item.image} style={{ width: '100%', height: '100%' }} />
+        {/* Favorite Button */}
+        <TouchableOpacity 
+          style={{ position: 'absolute', top: 8, right: 8, backgroundColor: '#ffffff90', width: 32, height: 32, borderRadius: 16, justifyContent: 'center', alignItems: 'center' }}
+          onPress={() => {
+            removeFavorite(item.id);
+            Alert.alert('Đã xóa', `${item.name} đã bị xóa khỏi yêu thích`);
+          }}
+        >
+          <Heart color="#ff6b9d" size={16} fill="#ff6b9d" strokeWidth={2} />
+        </TouchableOpacity>
+      </View>
+
+      <View style={{ padding: 10 }}>
+        <Text style={{ fontWeight: '700', fontSize: 12, color: '#333', marginBottom: 4 }} numberOfLines={2}>{item.name}</Text>
+        
+        {/* Rating */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+          <Star size={12} color="#ffb300" fill="#ffb300" />
+          <Text style={{ marginLeft: 4, fontSize: 11, fontWeight: '600', color: '#666' }}>{item.rating}</Text>
         </View>
 
-        <View style={styles.content}>
-          <ThemedText type="defaultSemiBold" style={styles.name} numberOfLines={2}>
-            {item.name}
-          </ThemedText>
+        {/* Price */}
+        <Text style={{ fontWeight: '800', fontSize: 13, color: '#ff6b9d', marginBottom: 8 }}>{item.price.toLocaleString('vi-VN')}đ</Text>
 
-          <View style={styles.ratingRow}>
-            <ThemedText style={styles.rating}>⭐ {item.rating}</ThemedText>
+        {/* Add to cart button */}
+        <TouchableOpacity 
+          style={{ backgroundColor: '#ff6b9d', paddingVertical: 6, borderRadius: 8, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 4 }}
+          onPress={() => handleAddToCart(item)}
+        >
+          <ShoppingCart size={12} color="#fff" strokeWidth={2} />
+          <Text style={{ fontSize: 11, fontWeight: '700', color: '#fff' }}>Thêm giỏ</Text>
+        </TouchableOpacity>
+      </View>
+    </TouchableOpacity>
+  );
+
+  // Render product item for list view
+  const renderListItem = (item: any) => (
+    <TouchableOpacity
+      key={item.id}
+      style={{ marginBottom: 12, backgroundColor: '#fff', borderRadius: 12, padding: 12, flexDirection: 'row', gap: 12, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 }}
+    >
+      <Image source={item.image} style={{ width: 100, height: 100, borderRadius: 10 }} />
+      
+      <View style={{ flex: 1, justifyContent: 'space-between' }}>
+        <View>
+          <Text style={{ fontWeight: '700', fontSize: 13, color: '#333', marginBottom: 4 }} numberOfLines={2}>{item.name}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Star size={12} color="#ffb300" fill="#ffb300" />
+              <Text style={{ marginLeft: 3, fontSize: 11, fontWeight: '600', color: '#666' }}>{item.rating}</Text>
+            </View>
+            <Text style={{ fontSize: 11, color: '#999' }}>Có sẵn</Text>
           </View>
+          <Text style={{ fontWeight: '800', fontSize: 14, color: '#ff6b9d' }}>{item.price.toLocaleString('vi-VN')}đ</Text>
+        </View>
 
-          <View style={styles.footer}>
-            <ThemedText type="defaultSemiBold" style={styles.price}>
-              ₫{item.price.toLocaleString('vi-VN')}
-            </ThemedText>
-            <TouchableOpacity 
-              style={styles.addCartBtn}
-              onPress={() => handleAddToCart(item)}
-            >
-              <ShoppingCart size={16} color="#fff" />
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          <TouchableOpacity 
+            style={{ flex: 1, backgroundColor: '#ff6b9d', paddingVertical: 6, borderRadius: 8, alignItems: 'center' }}
+            onPress={() => handleAddToCart(item)}
+          >
+            <Text style={{ fontSize: 11, fontWeight: '700', color: '#fff' }}>Thêm giỏ</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={{ width: 32, backgroundColor: '#ffe8f0', paddingVertical: 6, borderRadius: 8, alignItems: 'center', justifyContent: 'center' }}
+            onPress={() => {
+              removeFavorite(item.id);
+              Alert.alert('Đã xóa', `${item.name} đã bị xóa khỏi yêu thích`);
+            }}
+          >
+            <Heart color="#ff6b9d" size={14} fill="#ff6b9d" strokeWidth={2} />
+          </TouchableOpacity>
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+
+  // Empty state
+  if (!favorites || favorites.length === 0) {
+    return (
+      <LinearGradient colors={["#ff6b9d", "#c44569"]} style={{ flex: 1 }}>
+        <View style={{ paddingHorizontal: 16, paddingTop: 44, paddingBottom: 16 }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <TouchableOpacity onPress={() => router.back()}>
+              <ArrowLeft size={24} color="#fff" strokeWidth={2} />
+            </TouchableOpacity>
+            <View>
+              <Text style={{ fontSize: 18, fontWeight: '800', color: '#fff' }}>Yêu Thích</Text>
+            </View>
+            <TouchableOpacity onPress={() => router.push('/(tabs)/Cart')}>
+              <ShoppingCart size={24} color="#fff" strokeWidth={2} />
             </TouchableOpacity>
           </View>
         </View>
-      </ThemedView>
-    </View>
-  );
+
+        <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 16 }}>
+          <Heart size={80} color="#ffffff60" strokeWidth={1} />
+          <Text style={{ fontSize: 18, fontWeight: '800', color: '#fff', marginTop: 20 }}>Danh sách yêu thích trống</Text>
+          <Text style={{ fontSize: 14, color: '#ffffff80', marginTop: 8, textAlign: 'center' }}>Hãy nhấn biểu tượng ♥ ở sản phẩm để thêm vào danh sách</Text>
+          <TouchableOpacity 
+            style={{ marginTop: 32, backgroundColor: '#fff', paddingHorizontal: 32, paddingVertical: 12, borderRadius: 12 }}
+            onPress={() => router.push('/(tabs)')}
+          >
+            <Text style={{ fontSize: 15, fontWeight: '700', color: '#ff6b9d' }}>Khám phá ngay</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </LinearGradient>
+    );
+  }
 
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#FFE8ED', dark: '#1a1a1a' }}
-      headerImage={
-        <View style={styles.headerWrapper}>
-          <Heart size={60} color="#ff6699" fill="#ff6699" />
-          <ThemedText type="subtitle" style={styles.headerTitle}>
-            Yêu Thích
-          </ThemedText>
-        </View>
-      }
-    >
-      <ThemedView style={styles.container}>
-        {favorites.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Heart size={80} color="#ff6699" style={{ opacity: 0.3 }} />
-            <ThemedText type="title" style={styles.emptyTitle}>
-              Chưa có sản phẩm yêu thích
-            </ThemedText>
-            <ThemedText style={styles.emptyText}>
-              Bắt đầu thêm sản phẩm vào danh sách yêu thích của bạn
-            </ThemedText>
+    <View style={{ flex: 1, backgroundColor: '#faf9f8' }}>
+      {/* ====== HEADER ====== */}
+      <LinearGradient
+        colors={["#ff6b9d", "#c44569"]}
+        style={{ paddingHorizontal: 16, paddingTop: 44, paddingBottom: 16 }}
+      >
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <TouchableOpacity onPress={() => router.back()}>
+            <ArrowLeft size={24} color="#fff" strokeWidth={2} />
+          </TouchableOpacity>
+          <View>
+            <Text style={{ fontSize: 18, fontWeight: '800', color: '#fff' }}>Yêu Thích</Text>
+            <Text style={{ fontSize: 11, color: '#ffffff80', marginTop: 2 }}>{favorites.length} sản phẩm</Text>
           </View>
-        ) : (
-          <>
-            <ThemedText style={styles.countText}>
-              {favorites.length} sản phẩm yêu thích
-            </ThemedText>
-            <FlatList
-              data={favorites}
-              renderItem={renderFavoriteCard}
-              keyExtractor={item => item.id.toString()}
-              numColumns={2}
-              columnWrapperStyle={{ gap: 12 }}
-              scrollEnabled={false}
-              contentContainerStyle={{ gap: 12 }}
-            />
-          </>
-        )}
-      </ThemedView>
-    </ParallaxScrollView>
+          <TouchableOpacity onPress={() => router.push('/(tabs)/Cart')}>
+            <ShoppingCart size={24} color="#fff" strokeWidth={2} />
+          </TouchableOpacity>
+        </View>
+      </LinearGradient>
+
+      <ScrollView showsVerticalScrollIndicator={false}>
+        {/* ====== FILTER & SORT BAR ====== */}
+        <View style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+            <Text style={{ fontSize: 13, fontWeight: '600', color: '#333' }}>Sắp xếp</Text>
+            <View style={{ flexDirection: 'row', gap: 6 }}>
+              {[
+                { label: 'Mới', value: 'newest' },
+                { label: 'Giá ↓', value: 'price-high' },
+                { label: 'Giá ↑', value: 'price-low' },
+                { label: 'Sao', value: 'popular' }
+              ].map((option) => (
+                <TouchableOpacity
+                  key={option.value}
+                  style={{ 
+                    paddingHorizontal: 10, 
+                    paddingVertical: 6, 
+                    borderRadius: 8,
+                    backgroundColor: sortBy === option.value ? '#ff6b9d' : '#ffe8f0'
+                  }}
+                  onPress={() => handleSort(option.value as SortOption)}
+                >
+                  <Text style={{ fontSize: 11, fontWeight: '600', color: sortBy === option.value ? '#fff' : '#ff6b9d' }}>
+                    {option.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          {/* View Mode Toggle */}
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <TouchableOpacity
+              style={{ 
+                flex: 1, 
+                paddingVertical: 8, 
+                borderRadius: 8, 
+                alignItems: 'center',
+                backgroundColor: viewMode === 'grid' ? '#ff6b9d' : '#ffe8f0'
+              }}
+              onPress={() => setViewMode('grid')}
+            >
+              <Text style={{ fontSize: 12, fontWeight: '600', color: viewMode === 'grid' ? '#fff' : '#ff6b9d' }}>⊞ Lưới</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={{ 
+                flex: 1, 
+                paddingVertical: 8, 
+                borderRadius: 8, 
+                alignItems: 'center',
+                backgroundColor: viewMode === 'list' ? '#ff6b9d' : '#ffe8f0'
+              }}
+              onPress={() => setViewMode('list')}
+            >
+              <Text style={{ fontSize: 12, fontWeight: '600', color: viewMode === 'list' ? '#fff' : '#ff6b9d' }}>☰ Danh sách</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* ====== PRODUCTS ====== */}
+        <View style={{ paddingHorizontal: 10, paddingBottom: 20 }}>
+          {viewMode === 'grid' ? (
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+              {filteredFavorites.map((item: any) => renderProductCard(item))}
+            </View>
+          ) : (
+            <View style={{ paddingHorizontal: 6 }}>
+              {filteredFavorites.map((item: any) => renderListItem(item))}
+            </View>
+          )}
+        </View>
+      </ScrollView>
+    </View>
   );
 }
-
-const styles = StyleSheet.create({
-  headerWrapper: {
-    alignItems: 'center' as const,
-    paddingVertical: 40,
-    gap: 12,
-  },
-  headerTitle: {
-    color: '#ff6699',
-    fontFamily: Fonts.rounded,
-  },
-  container: {
-    paddingHorizontal: 12,
-    paddingVertical: 20,
-    paddingBottom: 40,
-  },
-  countText: {
-    fontSize: 13,
-    opacity: 0.6,
-    marginBottom: 16,
-  },
-  cardWrapper: {
-    flex: 1,
-  },
-  card: {
-    borderRadius: 14,
-    overflow: 'hidden' as const,
-    backgroundColor: '#fff',
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  imageContainer: {
-    position: 'relative' as const,
-    width: '100%',
-    aspectRatio: 1,
-  },
-  image: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 14,
-  },
-  favoriteBtn: {
-    position: 'absolute' as const,
-    top: 10,
-    right: 10,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
-  },
-  content: {
-    padding: 12,
-  },
-  name: {
-    fontSize: 13,
-    marginBottom: 6,
-    height: 32,
-  },
-  ratingRow: {
-    marginBottom: 8,
-  },
-  rating: {
-    fontSize: 12,
-  },
-  footer: {
-    flexDirection: 'row' as const,
-    justifyContent: 'space-between' as const,
-    alignItems: 'center' as const,
-  },
-  price: {
-    color: '#ff6699',
-    fontSize: 14,
-  },
-  addCartBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: '#ff6699',
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
-  },
-  emptyContainer: {
-    alignItems: 'center' as const,
-    paddingVertical: 80,
-  },
-  emptyTitle: {
-    marginTop: 20,
-    marginBottom: 8,
-  },
-  emptyText: {
-    fontSize: 13,
-    opacity: 0.6,
-    textAlign: 'center' as const,
-  },
-});
