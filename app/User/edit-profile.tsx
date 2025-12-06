@@ -1,4 +1,5 @@
 import { useAuth } from '@/contexts/AuthContext';
+import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { Camera, ChevronLeft } from 'lucide-react-native';
@@ -12,12 +13,14 @@ export default function EditProfileScreen() {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [avatarUri, setAvatarUri] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     if (user) {
       setFullName(user.fullName || '');
       setEmail(user.email || '');
       setPhone(user.phone || '');
+      setAvatarUri(user.avatar);
     }
   }, [user]);
 
@@ -35,11 +38,59 @@ export default function EditProfileScreen() {
       Alert.alert('Lỗi', 'Cập nhật không thành công');
     }
   };
+  const pickImage = async (useCamera: boolean) => {
+    try {
+      let result;
+
+      if (useCamera) {
+        const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+        if (!permissionResult.granted) {
+          Alert.alert('Lỗi quyền', 'Cần quyền truy cập camera để chụp ảnh.');
+          return;
+        }
+        result = await ImagePicker.launchCameraAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          allowsEditing: true,
+          aspect: [1, 1],
+          quality: 0.8,
+        });
+      } else {
+        const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (!permissionResult.granted) {
+          Alert.alert('Lỗi quyền', 'Cần quyền truy cập thư viện ảnh.');
+          return;
+        }
+        result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          allowsEditing: true,
+          aspect: [1, 1],
+          quality: 0.8,
+        });
+      }
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const uri = result.assets[0].uri;
+        setAvatarUri(uri);
+        try {
+          setIsLoading(true);
+          await updateProfile(fullName.trim() || user?.fullName || '', phone.trim() || user?.phone || '', uri);
+          setIsLoading(false);
+          Alert.alert('Thành công', 'Ảnh đại diện đã được cập nhật');
+        } catch (err) {
+          setIsLoading(false);
+          Alert.alert('Lỗi', 'Không thể cập nhật ảnh đại diện');
+        }
+      }
+    } catch (err) {
+      console.log('pickImage error', err);
+      Alert.alert('Lỗi', 'Không thể mở trình chọn ảnh');
+    }
+  };
 
   const handleChangeAvatar = () => {
     Alert.alert('Thay đổi ảnh đại diện', 'Chọn cách thay đổi ảnh đại diện', [
-      { text: 'Chụp ảnh', onPress: () => {} },
-      { text: 'Chọn từ thư viện', onPress: () => {} },
+      { text: 'Chụp ảnh', onPress: () => pickImage(true) },
+      { text: 'Chọn từ thư viện', onPress: () => pickImage(false) },
       { text: 'Hủy', style: 'cancel' },
     ]);
   };
@@ -60,7 +111,7 @@ export default function EditProfileScreen() {
       {/* Avatar Section */}
       <View style={styles.avatarContainer}>
         <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{user?.fullName ? user.fullName.split(' ').map(n=>n[0]).slice(0,2).join('') : 'NG'}</Text>
+          <Text style={styles.avatarText}>{user?.fullName ? user.fullName.split(' ').map(n => n[0]).slice(0, 2).join('') : 'NG'}</Text>
         </View>
         <TouchableOpacity onPress={handleChangeAvatar} style={styles.cameraButton}>
           <Camera size={16} color="white" />
