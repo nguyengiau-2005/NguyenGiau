@@ -1,3 +1,4 @@
+import { AppColors } from '@/constants/theme';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { ChevronLeft, Plus, Trash2 } from 'lucide-react-native';
@@ -60,7 +61,7 @@ export default function PaymentScreen() {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <LinearGradient colors={['#ff6b9d', '#c44569']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.header}>
+      <LinearGradient colors={[AppColors.primary, AppColors.primaryLight]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.header}>
         <View style={styles.headerContent}>
           <TouchableOpacity onPress={() => router.back()}>
             <ChevronLeft size={24} color="white" />
@@ -96,7 +97,7 @@ export default function PaymentScreen() {
                 onPress={() => handleDeletePayment(payment.id)}
                 style={styles.deleteButton}
               >
-                <Trash2 size={16} color="#FF6B9D" />
+                <Trash2 size={16} color={AppColors.primary} />
               </TouchableOpacity>
             </View>
           </View>
@@ -169,7 +170,7 @@ const styles = StyleSheet.create({
     color: '#999',
   },
   defaultBadge: {
-    backgroundColor: '#FF6B9D',
+    backgroundColor: AppColors.primary,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 4,
@@ -187,7 +188,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 8,
     paddingHorizontal: 12,
-    backgroundColor: '#FF6B9D',
+    backgroundColor: AppColors.primary,
     borderRadius: 6,
     alignItems: 'center',
   },
@@ -209,7 +210,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 12,
-    backgroundColor: '#FF6B9D',
+    backgroundColor: AppColors.primary,
     borderRadius: 12,
     paddingVertical: 16,
     marginTop: 8,

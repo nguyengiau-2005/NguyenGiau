@@ -1,8 +1,9 @@
+import { AppColors } from '@/constants/theme';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { ChevronLeft, Plus, Trash2 } from 'lucide-react-native';
 import React, { useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 interface Address {
   id: string;
@@ -44,10 +45,60 @@ export default function AddressScreen() {
     );
   };
 
+  // Add address form state
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [newPhone, setNewPhone] = useState('');
+  const [newAddress, setNewAddress] = useState('');
+  const [newCity, setNewCity] = useState('TP. Hồ Chí Minh');
+  const [newDistrict, setNewDistrict] = useState('');
+  const [newWard, setNewWard] = useState('');
+  const [pasteText, setPasteText] = useState('');
+
+  const handleAddAddress = () => {
+    if (!newName.trim() || !newPhone.trim() || !newAddress.trim()) {
+      // simple validation
+      Alert.alert('Lỗi', 'Vui lòng nhập tên, số điện thoại và địa chỉ');
+      return;
+    }
+
+    const id = Date.now().toString();
+    const addr: Address = {
+      id,
+      name: newName.trim(),
+      phone: newPhone.trim(),
+      address: newAddress.trim(),
+      isDefault: addresses.length === 0, // first becomes default
+    };
+    setAddresses([addr, ...addresses]);
+    setShowAddForm(false);
+    setNewName('');
+    setNewPhone('');
+    setNewAddress('');
+  };
+
+  const parsePastedAddress = (text: string) => {
+    setPasteText(text);
+    // Try to extract phone number
+    const phoneMatch = text.match(/(\+?\d[\d\s\-().]{6,}\d)/);
+    if (phoneMatch) setNewPhone(phoneMatch[0].trim());
+
+    // Split by commas and assign heuristically
+    const parts = text.split(',').map(p => p.trim()).filter(Boolean);
+    if (parts.length > 0) {
+      setNewAddress(parts.join(', '));
+    }
+    if (parts.length >= 3) {
+      setNewCity(parts[parts.length - 1]);
+      setNewDistrict(parts[parts.length - 2]);
+      setNewWard(parts[parts.length - 3]);
+    }
+  };
+
   return (
     <View style={styles.container}>
       {/* Header */}
-      <LinearGradient colors={['#ff6b9d', '#c44569']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.header}>
+      <LinearGradient colors={[AppColors.primary, AppColors.primaryLight]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.header}>
         <View style={styles.headerContent}>
           <TouchableOpacity onPress={() => router.back()}>
             <ChevronLeft size={24} color="white" />
@@ -81,16 +132,34 @@ export default function AddressScreen() {
                 onPress={() => handleDeleteAddress(address.id)}
                 style={styles.deleteButton}
               >
-                <Trash2 size={16} color="#FF6B9D" />
+                <Trash2 size={16} color={AppColors.primary} />
               </TouchableOpacity>
             </View>
           </View>
         ))}
 
-        <TouchableOpacity style={styles.addButton}>
-          <Plus size={24} color="white" />
-          <Text style={styles.addButtonText}>Thêm địa chỉ mới</Text>
-        </TouchableOpacity>
+        {/* Add new address form or button */}
+        {showAddForm ? (
+          <View style={[styles.addressCard, { backgroundColor: AppColors.surface }]}> 
+            <Text style={{ fontSize: 14, fontWeight: '700', marginBottom: 8 }}>Thêm địa chỉ mới</Text>
+            <TextInput placeholder="Tên (ví dụ: Nhà riêng)" value={newName} onChangeText={setNewName} style={styles.input} />
+            <TextInput placeholder="Số điện thoại" value={newPhone} onChangeText={setNewPhone} style={styles.input} keyboardType="phone-pad" />
+            <TextInput placeholder="Địa chỉ chi tiết" value={newAddress} onChangeText={setNewAddress} style={[styles.input, { height: 84 }]} multiline />
+            <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+              <TouchableOpacity onPress={handleAddAddress} style={[styles.addButton, { flex: 1 }]}> 
+                <Text style={styles.addButtonText}>Lưu</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setShowAddForm(false)} style={[styles.deleteButton, { flex: 1, alignItems: 'center' }]}> 
+                <Text>Hủy</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : (
+          <TouchableOpacity style={styles.addButton} onPress={() => setShowAddForm(true)}>
+            <Plus size={24} color="white" />
+            <Text style={styles.addButtonText}>Thêm địa chỉ mới</Text>
+          </TouchableOpacity>
+        )}
       </ScrollView>
     </View>
   );
@@ -143,7 +212,7 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   defaultBadge: {
-    backgroundColor: '#FF6B9D',
+    backgroundColor: AppColors.primary,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 4,
@@ -171,7 +240,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 8,
     paddingHorizontal: 12,
-    backgroundColor: '#FF6B9D',
+    backgroundColor: AppColors.primary,
     borderRadius: 6,
     alignItems: 'center',
   },
@@ -193,7 +262,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 12,
-    backgroundColor: '#FF6B9D',
+    backgroundColor: AppColors.primary,
     borderRadius: 12,
     paddingVertical: 16,
     marginTop: 8,
@@ -207,5 +276,14 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  input: {
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: '#eee',
+    marginBottom: 8,
   },
 });

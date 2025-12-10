@@ -1,3 +1,4 @@
+import { AppColors } from '@/constants/theme';
 import { useRecent } from '@/contexts/RecentContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -30,7 +31,7 @@ export default function RecentScreen() {
       </View>
 
       <TouchableOpacity style={styles.delete} onPress={() => removeRecent(item.id)}>
-        <Trash2 size={18} color="#FF6B9D" />
+        <Trash2 size={18} color={AppColors.primary} />
       </TouchableOpacity>
     </View>
   );
@@ -38,7 +39,7 @@ export default function RecentScreen() {
   if (!recent || recent.length === 0) {
     return (
       <View style={styles.containerEmpty}>
-        <LinearGradient colors={["#ff6b9d", "#c44569"]} style={styles.header}>
+        <LinearGradient colors={[AppColors.primary, AppColors.primaryLight]} style={styles.header}>
           <View style={styles.headerRow}>
             <TouchableOpacity onPress={() => router.back()}>
               <ChevronLeft size={22} color="white" />
@@ -61,7 +62,7 @@ export default function RecentScreen() {
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={["#ff6b9d", "#c44569"]} style={styles.header}>
+      <LinearGradient colors={[AppColors.primary, AppColors.primaryLight]} style={styles.header}>
         <View style={styles.headerRow}>
           <TouchableOpacity onPress={() => router.back()}>
             <ChevronLeft size={22} color="white" />
@@ -90,13 +91,13 @@ const styles = StyleSheet.create({
   headerTitle: { color: 'white', fontSize: 18, fontWeight: '700' },
   containerEmpty: { flex: 1 },
   emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
-  shopNow: { marginTop: 12, backgroundColor: '#FF6B9D', paddingHorizontal: 18, paddingVertical: 10, borderRadius: 8 },
+  shopNow: { marginTop: 12, backgroundColor: AppColors.primary, paddingHorizontal: 18, paddingVertical: 10, borderRadius: 8 },
   card: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'white', padding: 12, borderRadius: 10, marginBottom: 12 },
   image: { width: 64, height: 64, borderRadius: 8, marginRight: 12, backgroundColor: '#f2f2f2' },
   fallback: { width: 64, height: 64, borderRadius: 8, marginRight: 12, backgroundColor: '#fafafa', alignItems: 'center', justifyContent: 'center' },
   info: { flex: 1 },
   name: { fontSize: 14, fontWeight: '700', color: '#222' },
   meta: { fontSize: 12, color: '#888', marginTop: 4 },
-  price: { fontSize: 13, color: '#FF6B9D', fontWeight: '700', marginTop: 6 },
+  price: { fontSize: 13, color: AppColors.primary, fontWeight: '700', marginTop: 6 },
   delete: { padding: 8 },
 });

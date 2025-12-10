@@ -1,4 +1,5 @@
-import { useAuth } from '@/contexts/AuthContext';
+import { AppColors } from '@/constants/theme';
+import { useAuth } from '@/contexts/Auth';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -98,7 +99,7 @@ export default function EditProfileScreen() {
   return (
     <ScrollView style={styles.container}>
       {/* Header */}
-      <LinearGradient colors={['#ff6b9d', '#c44569']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.header}>
+      <LinearGradient colors={[AppColors.primary, AppColors.primaryLight]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.header}>
         <View style={styles.headerContent}>
           <TouchableOpacity onPress={() => router.back()}>
             <ChevronLeft size={24} color="white" />
@@ -204,7 +205,7 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: '#FF6B9D',
+    backgroundColor: AppColors.primary,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 12,
@@ -226,7 +227,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#FF6B9D',
+    backgroundColor: AppColors.primary,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
@@ -239,7 +240,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     paddingHorizontal: 20,
     paddingVertical: 8,
-    backgroundColor: '#FF6B9D',
+    backgroundColor: AppColors.primary,
     borderRadius: 20,
   },
   changeAvatarText: {
@@ -285,7 +286,7 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   saveButton: {
-    backgroundColor: '#FF6B9D',
+    backgroundColor: AppColors.primary,
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',

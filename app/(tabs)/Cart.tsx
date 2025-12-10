@@ -1,5 +1,7 @@
+import { AppColors } from '@/constants/theme';
 import { useCart } from '@/contexts/CartContext';
 import { useFavorites } from '@/contexts/FavoritesContext';
+import useDeviceLocation from '@/hooks/useDeviceLocation';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, Gift, Home, Minus, Plus, ShoppingCart, Trash2 } from 'lucide-react-native';
@@ -55,11 +57,12 @@ export default function CartScreen() {
   const shippingFee = totalPrice > 500000 ? 0 : SHIPPING_FEE;
   const totalPayment = totalPrice - discount + shippingFee;
   const itemCount = cart.reduce((count, item) => count + item.qty, 0);
+  const { address: detectedAddress, loading: locationLoading, fetchLocation } = useDeviceLocation();
 
   // Empty State
   if (!cart || cart.length === 0) {
     return (
-      <LinearGradient colors={["#ff6b9d", "#c44569"]} style={{ flex: 1 }}>
+      <LinearGradient colors={[AppColors.primary, AppColors.primaryLight]} style={{ flex: 1 }}>
         <View style={{ paddingHorizontal: 16, paddingTop: 44, paddingBottom: 20 }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
             <TouchableOpacity onPress={() => router.back()}>
@@ -80,7 +83,7 @@ export default function CartScreen() {
             style={{ marginTop: 32, backgroundColor: '#fff', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12 }}
             onPress={() => router.push('/(tabs)')}
           >
-            <Text style={{ fontSize: 15, fontWeight: '700', color: '#ff6b9d' }}>Mua sắm ngay</Text>
+            <Text style={{ fontSize: 15, fontWeight: '700', color: AppColors.primary }}>Mua sắm ngay</Text>
           </TouchableOpacity>
         </ScrollView>
       </LinearGradient>
@@ -88,10 +91,10 @@ export default function CartScreen() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#faf9f8' }}>
+    <View style={{ flex: 1, backgroundColor: AppColors.background }}>
       {/* ====== HEADER ====== */}
       <LinearGradient
-        colors={["#ff6b9d", "#c44569"]}
+        colors={[AppColors.primary, AppColors.primaryLight]}
         style={{ paddingHorizontal: 16, paddingTop: 44, paddingBottom: 16 }}
       >
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -116,48 +119,48 @@ export default function CartScreen() {
               key={item.id}
               activeOpacity={0.9}
               onPress={() => router.push(`/product/${item.id}`)}
-              style={{ marginBottom: 12, backgroundColor: '#fff', borderRadius: 14, overflow: 'hidden', shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 6, elevation: 3 }}
+              style={{ marginBottom: 12, backgroundColor: AppColors.surface, borderRadius: 14, overflow: 'hidden', shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 6, elevation: 3 }}
             >
               <View style={{ flexDirection: 'row', padding: 12, gap: 12, alignItems: 'center' }}>
                 {/* Checkbox */}
-                <TouchableOpacity 
-                  style={{ width: 26, height: 26, borderRadius: 6, borderWidth: 2, borderColor: '#ff6b9d', justifyContent: 'center', alignItems: 'center' }}
+                  <TouchableOpacity 
+                  style={{ width: 26, height: 26, borderRadius: 6, borderWidth: 2, borderColor: AppColors.primary, justifyContent: 'center', alignItems: 'center' }}
                   onPress={(e) => { e.stopPropagation?.(); toggleSelectItem(item.id); }}
                 >
                   {selectedItems.includes(item.id) && (
-                    <View style={{ width: 16, height: 16, borderRadius: 4, backgroundColor: '#ff6b9d' }} />
+                    <View style={{ width: 16, height: 16, borderRadius: 4, backgroundColor: AppColors.primary }} />
                   )}
                 </TouchableOpacity>
 
                 {/* Product Image */}
-                <Image source={item.img} style={{ width: 84, height: 84, borderRadius: 12, backgroundColor: '#fafafa' }} />
+                <Image source={typeof item.img === 'string' ? { uri: item.img } : item.img} style={{ width: 84, height: 84, borderRadius: 12, backgroundColor: '#fafafa' }} />
 
                 {/* Product Info */}
                 <View style={{ flex: 1, justifyContent: 'space-between' }}>
                   <View>
-                    <Text style={{ fontSize: 14, fontWeight: '800', color: '#222' }} numberOfLines={2}>{item.name}</Text>
-                    <Text style={{ marginTop: 6, fontSize: 13, fontWeight: '700', color: '#ff6b9d' }}>{item.price.toLocaleString('vi-VN')}đ</Text>
+                    <Text style={{ fontSize: 14, fontWeight: '800', color: AppColors.textPrimary }} numberOfLines={2}>{item.name}</Text>
+                    <Text style={{ marginTop: 6, fontSize: 13, fontWeight: '700', color: AppColors.primary }}>{item.price.toLocaleString('vi-VN')}đ</Text>
                   </View>
 
                   <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                       <TouchableOpacity 
-                        style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: '#fff', borderWidth: 1, borderColor: '#eee', justifyContent: 'center', alignItems: 'center' }}
+                        style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: AppColors.surface, borderWidth: 1, borderColor: '#eee', justifyContent: 'center', alignItems: 'center' }}
                         onPress={(e) => { e.stopPropagation?.(); decrease(item.id); }}
                       >
-                        <Minus size={14} color="#ff6b9d" strokeWidth={2} />
+                        <Minus size={14} color={AppColors.primary} strokeWidth={2} />
                       </TouchableOpacity>
                       <Text style={{ width: 28, textAlign: 'center', fontSize: 13, fontWeight: '600' }}>{item.qty}</Text>
                       <TouchableOpacity 
-                        style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: '#fff', borderWidth: 1, borderColor: '#eee', justifyContent: 'center', alignItems: 'center' }}
+                        style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: AppColors.surface, borderWidth: 1, borderColor: '#eee', justifyContent: 'center', alignItems: 'center' }}
                         onPress={(e) => { e.stopPropagation?.(); increase(item.id); }}
                       >
-                        <Plus size={14} color="#ff6b9d" strokeWidth={2} />
+                        <Plus size={14} color={AppColors.primary} strokeWidth={2} />
                       </TouchableOpacity>
                     </View>
 
                     <TouchableOpacity onPress={(e) => { e.stopPropagation?.(); removeFromCart(item.id); }} style={{ padding: 6 }}>
-                      <Trash2 size={18} color="#ff6b9d" />
+                      <Trash2 size={18} color={AppColors.primary} />
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -169,7 +172,7 @@ export default function CartScreen() {
         {/* ====== VOUCHER SECTION ====== */}
         <View style={{ marginHorizontal: 16, marginTop: 20 }}>
           <TouchableOpacity 
-            style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#fff', padding: 14, borderRadius: 12, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 }}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: AppColors.surface, padding: 14, borderRadius: 12, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 }}
             onPress={() => {
               Alert.alert('Chọn Voucher', 'Các mã giảm giá có sẵn', [
                 { text: 'SAVE50K (-50.000đ)', onPress: () => setSelectedVoucher('SAVE50K') },
@@ -178,20 +181,21 @@ export default function CartScreen() {
               ]);
             }}
           >
-            <Gift size={20} color="#ff6b9d" />
+            <Gift size={20} color={AppColors.primary} />
             <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 13, fontWeight: '600', color: '#333' }}>Chọn Voucher</Text>
-              <Text style={{ fontSize: 11, color: '#999', marginTop: 2 }}>{selectedVoucher || 'Không có mã nào được chọn'}</Text>
+              <Text style={{ fontSize: 13, fontWeight: '600', color: AppColors.textPrimary }}>Chọn Voucher</Text>
+              <Text style={{ fontSize: 11, color: AppColors.textMuted, marginTop: 2 }}>{selectedVoucher || 'Không có mã nào được chọn'}</Text>
             </View>
-            <Text style={{ fontSize: 12, fontWeight: '600', color: '#ff6b9d' }}>›</Text>
+            <Text style={{ fontSize: 12, fontWeight: '600', color: AppColors.primary }}>›</Text>
           </TouchableOpacity>
         </View>
 
         {/* ====== SHIPPING INFO ====== */}
         <View style={{ marginHorizontal: 16, marginTop: 16 }}>
           <Text style={{ fontSize: 14, fontWeight: '700', color: '#333', marginBottom: 10 }}>Thông tin giao hàng</Text>
-          <View style={{ backgroundColor: '#fff', padding: 14, borderRadius: 12, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 }}>
-            <Text style={{ fontSize: 12, color: '#666', marginBottom: 8 }}>📍 Giao tới: Nhà riêng</Text>
+          <View style={{ backgroundColor: AppColors.surface, padding: 14, borderRadius: 12, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 }}>
+            <Text style={{ fontSize: 12, color: '#666', marginBottom: 8 }}>📍 Giao tới: {locationLoading ? 'Đang lấy địa chỉ...' : (detectedAddress ?? 'Nhà riêng')}</Text>
+            <TouchableOpacity onPress={fetchLocation}><Text style={{ color: AppColors.primary, marginTop: 6 }}>Cập nhật vị trí</Text></TouchableOpacity>
             <Text style={{ fontSize: 12, color: '#666', marginBottom: 8 }}>🚚 Phương thức: Giao hàng tiêu chuẩn</Text>
             <Text style={{ fontSize: 12, color: '#666' }}>📅 Dự kiến: 2-3 ngày làm việc</Text>
           </View>
@@ -199,11 +203,11 @@ export default function CartScreen() {
 
         {/* ====== ORDER SUMMARY ====== */}
         <View style={{ marginHorizontal: 16, marginTop: 16, marginBottom: 200 }}>
-          <Text style={{ fontSize: 14, fontWeight: '700', color: '#333', marginBottom: 10 }}>Tổng kết thanh toán</Text>
-          <View style={{ backgroundColor: '#fff', padding: 16, borderRadius: 12, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 }}>
+          <Text style={{ fontSize: 14, fontWeight: '700', color: AppColors.textPrimary, marginBottom: 10 }}>Tổng kết thanh toán</Text>
+          <View style={{ backgroundColor: AppColors.surface, padding: 16, borderRadius: 12, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
-              <Text style={{ fontSize: 13, color: '#666' }}>Tổng tiền hàng</Text>
-              <Text style={{ fontSize: 13, fontWeight: '600', color: '#333' }}>{totalPrice.toLocaleString('vi-VN')}đ</Text>
+              <Text style={{ fontSize: 13, color: AppColors.textSecondary }}>Tổng tiền hàng</Text>
+              <Text style={{ fontSize: 13, fontWeight: '600', color: AppColors.textPrimary }}>{totalPrice.toLocaleString('vi-VN')}đ</Text>
             </View>
             {discount > 0 && (
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
@@ -212,14 +216,14 @@ export default function CartScreen() {
               </View>
             )}
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: '#eee' }}>
-              <Text style={{ fontSize: 13, color: '#666' }}>Phí vận chuyển</Text>
-              <Text style={{ fontSize: 13, fontWeight: '600', color: shippingFee === 0 ? '#27ae60' : '#333' }}>
+                <Text style={{ fontSize: 13, color: AppColors.textSecondary }}>Phí vận chuyển</Text>
+              <Text style={{ fontSize: 13, fontWeight: '600', color: shippingFee === 0 ? '#27ae60' : AppColors.textPrimary }}>
                 {shippingFee === 0 ? 'Miễn phí' : shippingFee.toLocaleString('vi-VN') + 'đ'}
               </Text>
             </View>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingTop: 12 }}>
-              <Text style={{ fontSize: 15, fontWeight: '700', color: '#333' }}>Tổng thanh toán</Text>
-              <Text style={{ fontSize: 18, fontWeight: '800', color: '#ff6b9d' }}>{totalPayment.toLocaleString('vi-VN')}đ</Text>
+              <Text style={{ fontSize: 15, fontWeight: '700', color: AppColors.textPrimary }}>Tổng thanh toán</Text>
+              <Text style={{ fontSize: 18, fontWeight: '800', color: AppColors.primary }}>{totalPayment.toLocaleString('vi-VN')}đ</Text>
             </View>
             {discount > 0 && (
               <Text style={{ fontSize: 11, color: '#27ae60', marginTop: 10 }}>🎉 Bạn tiết kiệm được {discount.toLocaleString('vi-VN')}đ</Text>
@@ -229,25 +233,25 @@ export default function CartScreen() {
       </ScrollView>
 
       {/* ====== BOTTOM CHECKOUT BAR ====== */}
-      <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#eee', paddingHorizontal: 16, paddingVertical: 12, paddingBottom: 20 }}>
+      <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: AppColors.surface, borderTopWidth: 1, borderTopColor: AppColors.divider, paddingHorizontal: 16, paddingVertical: 12, paddingBottom: 20 }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
           <TouchableOpacity 
             style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}
             onPress={toggleSelectAll}
           >
             <View 
-              style={{ width: 20, height: 20, borderRadius: 4, borderWidth: 2, borderColor: '#ff6b9d', justifyContent: 'center', alignItems: 'center' }}
+              style={{ width: 20, height: 20, borderRadius: 4, borderWidth: 2, borderColor: AppColors.primary, justifyContent: 'center', alignItems: 'center' }}
             >
-              {selectAll && <View style={{ width: 12, height: 12, borderRadius: 2, backgroundColor: '#ff6b9d' }} />}
+              {selectAll && <View style={{ width: 12, height: 12, borderRadius: 2, backgroundColor: AppColors.primary }} />}
             </View>
-            <Text style={{ fontSize: 13, fontWeight: '600', color: '#333' }}>Chọn tất cả</Text>
+            <Text style={{ fontSize: 13, fontWeight: '600', color: AppColors.textPrimary }}>Chọn tất cả</Text>
           </TouchableOpacity>
-          <Text style={{ fontSize: 15, fontWeight: '700', color: '#ff6b9d' }}>{selectedItems.length > 0 ? totalPayment.toLocaleString('vi-VN') : '0'}đ</Text>
+          <Text style={{ fontSize: 15, fontWeight: '700', color: AppColors.primary }}>{selectedItems.length > 0 ? totalPayment.toLocaleString('vi-VN') : '0'}đ</Text>
         </View>
 
         <TouchableOpacity 
-          style={{ 
-            backgroundColor: selectedItems.length > 0 ? '#ff6b9d' : '#ccc', 
+            style={{ 
+            backgroundColor: selectedItems.length > 0 ? AppColors.primary : '#ccc', 
             paddingVertical: 14, 
             borderRadius: 10, 
             alignItems: 'center' 

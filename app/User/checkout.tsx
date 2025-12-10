@@ -1,6 +1,8 @@
-import { useAuth } from '@/contexts/AuthContext';
+import { AppColors } from '@/constants/theme';
+import { useAuth } from '@/contexts/Auth';
 import { useCart } from '@/contexts/CartContext';
 import { useOrders } from '@/contexts/OrdersContext';
+import useDeviceLocation from '@/hooks/useDeviceLocation';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { ChevronLeft, MapPin, ShoppingBag } from 'lucide-react-native';
@@ -50,6 +52,8 @@ export default function CheckoutScreen() {
     address: '123 Đường Lê Lợi, Quận 1, TP.HCM',
   });
 
+  const { address: detectedAddress, loading: locationLoading, fetchLocation } = useDeviceLocation();
+
   const [shippingMethod, setShippingMethod] = useState('standard');
   const [paymentMethod, setPaymentMethod] = useState('cod');
   const [selectedVoucher, setSelectedVoucher] = useState<VoucherOption | null>(null);
@@ -93,7 +97,7 @@ export default function CheckoutScreen() {
   if (cartItems.length === 0) {
     return (
       <View style={styles.container}>
-        <LinearGradient colors={['#ff6b9d', '#c44569']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.header}>
+        <LinearGradient colors={[AppColors.primary, AppColors.primaryLight]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.header}>
           <View style={styles.headerContent}>
             <TouchableOpacity onPress={() => router.back()}>
               <ChevronLeft size={24} color="white" />
@@ -191,7 +195,7 @@ export default function CheckoutScreen() {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <LinearGradient colors={['#ff6b9d', '#c44569']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.header}>
+      <LinearGradient colors={[AppColors.primary, AppColors.primaryLight]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.header}>
         <View style={styles.headerContent}>
           <TouchableOpacity onPress={() => router.back()}>
             <ChevronLeft size={24} color="white" />
@@ -207,7 +211,7 @@ export default function CheckoutScreen() {
         {/* Shipping Address Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <MapPin size={18} color="#FF6B9D" />
+            <MapPin size={18} color={AppColors.primary} />
             <Text style={styles.sectionTitle}>Địa chỉ giao hàng</Text>
           </View>
           {shippingAddress ? (
@@ -216,6 +220,11 @@ export default function CheckoutScreen() {
                 <Text style={styles.addressName}>{shippingAddress.name}</Text>
                 <Text style={styles.addressPhone}>{shippingAddress.phone}</Text>
                 <Text style={styles.addressText}>{shippingAddress.address}</Text>
+                {detectedAddress && detectedAddress !== shippingAddress.address && (
+                  <TouchableOpacity onPress={() => setShippingAddress(s => ({ ...s, address: detectedAddress }))} style={{ marginTop: 8 }}>
+                    <Text style={{ color: AppColors.primary }}>Sử dụng địa chỉ hiện tại: {locationLoading ? '...' : detectedAddress}</Text>
+                  </TouchableOpacity>
+                )}
                 <TouchableOpacity
                   onPress={() => router.push('/user/address' as any)}
                   style={styles.changeButton}
@@ -339,7 +348,7 @@ export default function CheckoutScreen() {
             {voucherDiscount > 0 && (
               <View style={styles.summaryRow}>
                 <Text style={styles.summaryLabel}>Giảm giá ({selectedVoucher?.code}):</Text>
-                <Text style={[styles.summaryValue, { color: '#FF6B9D' }]}>
+                <Text style={[styles.summaryValue, { color: AppColors.primary }]}>
                   -{voucherDiscount.toLocaleString()}đ
                 </Text>
               </View>
@@ -351,7 +360,7 @@ export default function CheckoutScreen() {
             {shippingVoucherDiscount > 0 && (
               <View style={styles.summaryRow}>
                 <Text style={styles.summaryLabel}>Giảm ship ({selectedShippingVoucher?.code}):</Text>
-                <Text style={[styles.summaryValue, { color: '#FF6B9D' }]}>
+                <Text style={[styles.summaryValue, { color: AppColors.primary }]}>
                   -{shippingVoucherDiscount.toLocaleString()}đ
                 </Text>
               </View>
@@ -359,7 +368,7 @@ export default function CheckoutScreen() {
             {usePoints && (
               <View style={styles.summaryRow}>
                 <Text style={styles.summaryLabel}>Dùng điểm:</Text>
-                <Text style={[styles.summaryValue, { color: '#FF6B9D' }]}>
+                <Text style={[styles.summaryValue, { color: AppColors.primary }]}>
                   -{pointsDiscount.toLocaleString()}đ
                 </Text>
               </View>
@@ -480,7 +489,7 @@ export default function CheckoutScreen() {
           <Text style={styles.bottomPrice}>{total.toLocaleString()}đ</Text>
         </View>
         <TouchableOpacity onPress={handlePlaceOrder} disabled={isLoading} activeOpacity={0.9}>
-          <LinearGradient colors={["#ff6b9d", "#ff4a86"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ borderRadius: 10 }}>
+          <LinearGradient colors={[AppColors.primary, AppColors.primaryLight]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ borderRadius: 10 }}>
             <View style={{ paddingVertical: 12, paddingHorizontal: 28, minWidth: 140, alignItems: 'center' }}>
               {isLoading ? (
                 <ActivityIndicator size="small" color="white" />
@@ -682,7 +691,7 @@ const styles = StyleSheet.create({
   changeButton: {
     paddingVertical: 6,
     paddingHorizontal: 12,
-    backgroundColor: '#FF6B9D',
+    backgroundColor: AppColors.primary,
     borderRadius: 6,
     alignSelf: 'flex-start',
   },
@@ -701,7 +710,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffe0e8',
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#FF6B9D',
+    borderColor: AppColors.primary,
     borderStyle: 'dashed',
   },
   addAddressIcon: {
@@ -710,7 +719,7 @@ const styles = StyleSheet.create({
   addAddressText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#FF6B9D',
+    color: AppColors.primary,
   },
   radioOption: {
     flexDirection: 'row',
@@ -735,13 +744,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   radioButtonSelected: {
-    borderColor: '#FF6B9D',
+    borderColor: AppColors.primary,
   },
   radioButtonInner: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: '#FF6B9D',
+    backgroundColor: AppColors.primary,
   },
   optionContent: {
     flex: 1,
@@ -762,7 +771,7 @@ const styles = StyleSheet.create({
   optionPrice: {
     fontSize: 12,
     fontWeight: 'bold',
-    color: '#FF6B9D',
+    color: AppColors.primary,
   },
   itemCard: {
     flexDirection: 'row',
@@ -801,7 +810,7 @@ const styles = StyleSheet.create({
   itemPrice: {
     fontSize: 12,
     fontWeight: 'bold',
-    color: '#FF6B9D',
+    color: AppColors.primary,
   },
   summaryBox: {
     backgroundColor: '#f9f9f9',
@@ -840,7 +849,7 @@ const styles = StyleSheet.create({
   },
   voucherDiscount: {
     fontSize: 11,
-    color: '#FF6B9D',
+    color: AppColors.primary,
     marginTop: 2,
   },
   pointsOption: {
@@ -861,8 +870,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   checkboxChecked: {
-    borderColor: '#FF6B9D',
-    backgroundColor: '#FF6B9D',
+    borderColor: AppColors.primary,
+    backgroundColor: AppColors.primary,
   },
   checkmark: {
     color: 'white',
@@ -925,7 +934,7 @@ const styles = StyleSheet.create({
   finalPrice: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: '#FF6B9D',
+    color: AppColors.primary,
   },
   termsText: {
     fontSize: 11,
@@ -933,7 +942,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   termsLink: {
-    color: '#FF6B9D',
+    color: AppColors.primary,
     fontWeight: '600',
   },
   bottomBar: {
@@ -959,10 +968,10 @@ const styles = StyleSheet.create({
   bottomPrice: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#FF6B9D',
+    color: AppColors.primary,
   },
   checkoutButton: {
-    backgroundColor: '#FF6B9D',
+    backgroundColor: AppColors.primary,
     borderRadius: 8,
     paddingHorizontal: 32,
     paddingVertical: 12,
@@ -993,7 +1002,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   continueShoppingBtn: {
-    backgroundColor: '#FF6B9D',
+    backgroundColor: AppColors.primary,
     borderRadius: 8,
     paddingHorizontal: 32,
     paddingVertical: 12,
@@ -1045,7 +1054,7 @@ const styles = StyleSheet.create({
   voucherItemCode: {
     fontSize: 14,
     fontWeight: 'bold',
-    color: '#FF6B9D',
+    color: AppColors.primary,
   },
   voucherItemDescription: {
     fontSize: 11,
@@ -1070,7 +1079,7 @@ const styles = StyleSheet.create({
   totalPrice: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#FF6B9D',
+    color: AppColors.primary,
   },
   savingsBadge: {
     marginTop: 8,

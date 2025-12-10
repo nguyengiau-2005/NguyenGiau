@@ -10,8 +10,8 @@ const tintColorDark = '#fff';
 
 export const Colors = {
   light: {
-    text: '#11181C',
-    background: '#fff',
+    text: '#0B1620',
+    background: '#F7FAFC',
     tint: tintColorLight,
     icon: '#687076',
     tabIconDefault: '#687076',
@@ -51,3 +51,33 @@ export const Fonts = Platform.select({
     mono: "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
   },
 });
+
+export const AppColors = {
+  // Pink‑purple pastel theme (hồng ánh tím)
+  // Core palette
+  primary: '#E69FF6',        // pastel pink-purple (main)
+  primaryLight: '#F9E8FB',   // very light/airy pink tint
+  primaryDark: '#9B3FBF',    // darker purple for CTAs
+  primaryGradient: ['#E69FF6', '#D08BF8'] as const,
+  brandGradient: ['#E69FF6', '#B573FF'] as const,
+
+  // Contrast / surface tokens
+  background: '#FFF7FB',     // app background (soft pinkish white)
+  surface: '#FFFFFF',        // cards and surfaces
+  surfaceElevated: '#FFF9FE',
+
+  // Text colors
+  textPrimary: '#231428',    // deep muted purple for high contrast
+  textSecondary: '#5F4660',
+  textMuted: '#9F84A8',
+
+  // On-colors (what color to use on top of primary / surface)
+  onPrimary: '#FFFFFF',
+  onSurface: '#231428',
+
+  // Utility
+  disabled: '#CBBED0',
+  divider: '#F3E8F7',
+};
+
+export default { Colors, Fonts, AppColors };

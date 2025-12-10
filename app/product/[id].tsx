@@ -1,19 +1,22 @@
 import products from '@/constants/products';
+import { AppColors } from '@/constants/theme';
 import { useCart } from '@/contexts/CartContext';
+import { useFavorites } from '@/contexts/FavoritesContext';
 import { useRecent } from '@/contexts/RecentContext';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as Location from 'expo-location';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronLeft, Heart, MessageCircle, Share2, ShoppingCart } from 'lucide-react-native';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
-    Alert,
-    Image,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  Alert,
+  Image,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 
 // This is a single-file product detail screen scaffolded to cover the 13 sections.
@@ -24,6 +27,7 @@ export default function ProductDetailScreen() {
   const router = useRouter();
   const { addToCart } = useCart();
   const { addRecent } = useRecent();
+  const { addFavorite, removeFavorite, isFavorite } = useFavorites();
 
   const paramId = Array.isArray(id) ? id[0] : id;
 
@@ -85,6 +89,8 @@ export default function ProductDetailScreen() {
   const [qty, setQty] = useState(1);
   const [fav, setFav] = useState(false);
   const [note, setNote] = useState('');
+  const [shippingAddress, setShippingAddress] = useState<string | null>(null);
+  const [locationLoading, setLocationLoading] = useState(false);
 
   const subtotal = useMemo(() => product.price * qty, [product.price, qty]);
 
@@ -117,6 +123,56 @@ export default function ProductDetailScreen() {
     router.push('/(tabs)/Cart');
   };
 
+  // initialize fav from FavoritesContext
+  useEffect(() => {
+    const idNum = Number(product.id);
+    setFav(isFavorite(idNum));
+  }, [product.id, isFavorite]);
+
+  const toggleFavorite = () => {
+    const idNum = Number(product.id);
+    if (isFavorite(idNum)) {
+      removeFavorite(idNum);
+      setFav(false);
+    } else {
+      addFavorite({ id: Number(product.id), name: product.name, price: product.price, rating: product.rating, image: product.images[0] as any });
+      setFav(true);
+    }
+  };
+
+  // Fetch device location and reverse-geocode to a readable address
+  const fetchLocation = async () => {
+    try {
+      setLocationLoading(true);
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Quyền truy cập vị trí bị từ chối', 'Vui lòng cấp quyền vị trí để tự động điền địa chỉ giao hàng.');
+        setLocationLoading(false);
+        return;
+      }
+
+      const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      const rev = await Location.reverseGeocodeAsync({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
+      if (rev && rev.length > 0) {
+        const first = rev[0];
+        const parts = [first.name, first.street, first.city, first.region, first.postalCode].filter(Boolean);
+        setShippingAddress(parts.join(', '));
+      } else {
+        setShippingAddress('Không xác định');
+      }
+    } catch (err) {
+      console.warn('Location error', err);
+      Alert.alert('Lỗi vị trí', 'Không thể lấy vị trí thiết bị.');
+    } finally {
+      setLocationLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    // attempt to fetch location on mount (best-effort)
+    fetchLocation();
+  }, []);
+
   return (
     <View style={styles.container}>
       <LinearGradient colors={["#00000000", "#ffffff00"]} style={styles.headerGradient}>
@@ -126,7 +182,7 @@ export default function ProductDetailScreen() {
           </TouchableOpacity>
           <View style={{ flexDirection: 'row', gap: 8 }}>
             <TouchableOpacity onPress={() => setFav(s => !s)} style={styles.iconBtn}>
-              <Heart size={22} color={fav ? '#FF6B9D' : '#fff'} />
+              <Heart size={22} color={fav ? AppColors.primary : '#fff'} />
             </TouchableOpacity>
             <TouchableOpacity onPress={() => Alert.alert('Chia sẻ', 'Chia sẻ sản phẩm')} style={styles.iconBtn}>
               <Share2 size={22} color="#fff" />
@@ -141,13 +197,26 @@ export default function ProductDetailScreen() {
       <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
         {/* 2. Banner images (carousel simplified) */}
         <View style={styles.bannerContainer}>
-          <Image source={{ uri: product.images[activeImage] }} style={styles.bannerImage} />
+          {(() => {
+            const src = product.images[activeImage];
+            return <Image source={typeof src === 'string' ? { uri: src } : src} style={styles.bannerImage} />;
+          })()}
           <View style={styles.indicatorRow}>
             {product.images.map((_, i) => (
               <View key={i} style={[styles.dot, activeImage === i && styles.dotActive]} />
             ))}
           </View>
         </View>
+        {/* Thumbnails */}
+        {product.images.length > 1 && (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8, paddingHorizontal: 12 }}>
+            {product.images.map((src, i) => (
+              <TouchableOpacity key={i} onPress={() => setActiveImage(i)} style={{ marginRight: 8, borderRadius: 8, overflow: 'hidden', borderWidth: activeImage === i ? 2 : 1, borderColor: activeImage === i ? AppColors.primary : '#eee' }}>
+                <Image source={typeof src === 'string' ? { uri: src } : src} style={{ width: 72, height: 72 }} />
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        )}
 
         {/* 3. Title + rating */}
         <View style={styles.section}>
@@ -155,7 +224,7 @@ export default function ProductDetailScreen() {
           <View style={styles.rowBetween}>
             <Text style={styles.rating}>⭐ {product.rating} · {product.reviews.toLocaleString()} đánh giá · {product.sold.toLocaleString()} đã bán</Text>
             <TouchableOpacity onPress={() => Alert.alert('Chia sẻ', 'Chia sẻ') }>
-              <Text style={{ color: '#FF6B9D' }}>Chia sẻ</Text>
+              <Text style={{ color: AppColors.primary }}>Chia sẻ</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -206,15 +275,16 @@ export default function ProductDetailScreen() {
           <Text style={styles.sectionTitle}>Khuyến mãi & Voucher</Text>
           <TouchableOpacity onPress={() => Alert.alert('Voucher', 'Thu thập voucher')} style={styles.promoRow}>
             <Text>Giảm 15% cho đơn hàng từ 199k</Text>
-            <Text style={{ color: '#FF6B9D' }}>Thu thập</Text>
+              <Text style={{ color: AppColors.primary }}>Thu thập</Text>
           </TouchableOpacity>
         </View>
 
         {/* 7. Shipping info */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Vận chuyển</Text>
-          <Text>Giao đến: Địa chỉ mặc định</Text>
-          <Text>Thời gian dự kiến: Giao trong 3-5 ngày</Text>
+          <Text>Giao đến: {locationLoading ? 'Đang lấy địa chỉ...' : (shippingAddress ?? 'Địa chỉ mặc định')}</Text>
+          <TouchableOpacity onPress={fetchLocation}><Text style={{ color: AppColors.primary, marginTop: 6 }}>Cập nhật vị trí</Text></TouchableOpacity>
+          <Text style={{ marginTop: 8 }}>Thời gian dự kiến: Giao trong 3-5 ngày</Text>
           <Text>Phí vận chuyển: 15.000đ</Text>
         </View>
 
@@ -224,8 +294,8 @@ export default function ProductDetailScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Mô tả sản phẩm</Text>
           <Text numberOfLines={5} style={{ color: '#444' }}>{product.description}</Text>
-          <TouchableOpacity onPress={() => Alert.alert('Xem thêm', product.description)}>
-            <Text style={{ color: '#FF6B9D', marginTop: 8 }}>Xem thêm</Text>
+            <TouchableOpacity onPress={() => Alert.alert('Xem thêm', product.description)}>
+            <Text style={{ color: AppColors.primary, marginTop: 8 }}>Xem thêm</Text>
           </TouchableOpacity>
         </View>
 
@@ -259,7 +329,7 @@ export default function ProductDetailScreen() {
                 <TouchableOpacity key={p.id} style={styles.relatedCard} onPress={() => router.push(`/product/${p.id}`)}>
                   <Image source={typeof p.image === 'string' ? { uri: p.image } : p.image} style={{ width: 100, height: 100 }} />
                   <Text style={{ fontSize: 12, fontWeight: '700', textAlign: 'center' }} numberOfLines={2}>{p.name}</Text>
-                  <Text style={{ color: '#FF6B9D', fontWeight: '700' }}>{p.price.toLocaleString()}đ</Text>
+                  <Text style={{ color: AppColors.primary, fontWeight: '700' }}>{p.price.toLocaleString()}đ</Text>
                 </TouchableOpacity>
               ))
             )}
@@ -272,8 +342,8 @@ export default function ProductDetailScreen() {
       {/* 13. Sticky bottom bar */}
       <View style={styles.bottomBar}>
         <TouchableOpacity style={styles.bottomIcon}><MessageCircle size={20} color="#333" /></TouchableOpacity>
-        <TouchableOpacity style={styles.bottomIcon} onPress={() => setFav(s => !s)}>
-          <Heart size={20} color={fav ? '#FF6B9D' : '#333'} />
+          <TouchableOpacity style={styles.bottomIcon} onPress={() => setFav(s => !s)}>
+          <Heart size={20} color={fav ? AppColors.primary : '#333'} />
         </TouchableOpacity>
         <TouchableOpacity style={styles.cartBtn} onPress={handleAddToCart}><Text style={{ color: '#fff' }}>Thêm vào giỏ</Text></TouchableOpacity>
         <TouchableOpacity style={styles.buyBtn} onPress={handleBuyNow}><Text style={{ color: '#fff', fontWeight: '800' }}>Mua ngay</Text></TouchableOpacity>
@@ -283,7 +353,7 @@ export default function ProductDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
+  container: { flex: 1, backgroundColor: AppColors.background },
   headerGradient: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 5 },
   headerRow: { paddingTop: 36, paddingHorizontal: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   iconBtn: { padding: 8, backgroundColor: 'rgba(0,0,0,0.35)', borderRadius: 8 },
@@ -292,27 +362,27 @@ const styles = StyleSheet.create({
   bannerImage: { width: '100%', height: '100%', resizeMode: 'cover' },
   indicatorRow: { position: 'absolute', bottom: 12, flexDirection: 'row', gap: 6 },
   dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.6)', marginHorizontal: 4 },
-  dotActive: { backgroundColor: '#FF6B9D' },
-  section: { paddingHorizontal: 14, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#f2f2f2', backgroundColor: '#fff' },
+  dotActive: { backgroundColor: AppColors.primary },
+  section: { paddingHorizontal: 14, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#f2f2f2', backgroundColor: AppColors.surface },
   rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   title: { fontSize: 16, fontWeight: '800', color: '#222' },
   rating: { color: '#666' },
-  price: { fontSize: 22, fontWeight: '900', color: '#FF6B9D' },
+  price: { fontSize: 22, fontWeight: '900', color: AppColors.primary },
   priceOld: { textDecorationLine: 'line-through', color: '#999' },
-  discount: { color: '#fff', backgroundColor: '#FF6B9D', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
+  discount: { color: '#fff', backgroundColor: AppColors.primary, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
   sectionTitle: { fontSize: 14, fontWeight: '700', marginBottom: 6 },
   variantLabel: { fontSize: 13, fontWeight: '700' },
-  variantPill: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, backgroundColor: '#fff', borderWidth: 1, borderColor: '#eee' },
-  variantPillActive: { backgroundColor: '#FFEEF3', borderColor: '#FF6B9D' },
+  variantPill: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, backgroundColor: AppColors.surface, borderWidth: 1, borderColor: '#eee' },
+  variantPillActive: { backgroundColor: AppColors.primaryLight, borderColor: AppColors.primary },
   variantText: { color: '#333' },
-  variantTextActive: { color: '#FF6B9D', fontWeight: '700' },
+  variantTextActive: { color: AppColors.primary, fontWeight: '700' },
   qtyBtn: { width: 36, height: 36, borderRadius: 8, backgroundColor: '#f2f2f2', alignItems: 'center', justifyContent: 'center' },
-  promoRow: { flexDirection: 'row', justifyContent: 'space-between', padding: 12, backgroundColor: '#fff', borderRadius: 8, borderWidth: 1, borderColor: '#f2f2f2' },
+  promoRow: { flexDirection: 'row', justifyContent: 'space-between', padding: 12, backgroundColor: AppColors.surface, borderRadius: 8, borderWidth: 1, borderColor: '#f2f2f2' },
   specRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6 },
-  relatedCard: { width: 120, marginRight: 12, backgroundColor: '#fff', padding: 8, borderRadius: 8, alignItems: 'center' },
-  followBtn: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: '#FF6B9D' },
-  bottomBar: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 72, backgroundColor: '#fff', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, gap: 8, borderTopWidth: 1, borderTopColor: '#eee' },
-  bottomIcon: { padding: 10, borderRadius: 8, backgroundColor: '#fff' },
-  cartBtn: { backgroundColor: '#FF6B9D', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, marginRight: 8 },
+  relatedCard: { width: 120, marginRight: 12, backgroundColor: AppColors.surface, padding: 8, borderRadius: 8, alignItems: 'center' },
+  followBtn: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: AppColors.primary },
+  bottomBar: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 72, backgroundColor: AppColors.surface, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, gap: 8, borderTopWidth: 1, borderTopColor: '#eee' },
+  bottomIcon: { padding: 10, borderRadius: 8, backgroundColor: AppColors.surface },
+  cartBtn: { backgroundColor: AppColors.primaryDark, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, marginRight: 8 },
   buyBtn: { backgroundColor: '#C8184A', paddingHorizontal: 18, paddingVertical: 12, borderRadius: 8 }
 });

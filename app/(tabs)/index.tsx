@@ -1,11 +1,12 @@
 
-import { useAuth } from '@/contexts/AuthContext';
+import { AppColors } from '@/constants/theme';
+import { useAuth } from '@/contexts/Auth';
 import { useCart } from '@/contexts/CartContext';
 import { useFavorites } from '@/contexts/FavoritesContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { AlertCircle, Bell, Flame, Gift, Heart, MapPin, Menu, Search, ShoppingCart, Sparkles, Star, TrendingUp } from 'lucide-react-native';
-import { useState } from 'react';
+import { AlertCircle, Bell, Gift, Heart, MapPin, Menu, Search, ShoppingCart, Sparkles, Star, TrendingUp } from 'lucide-react-native';
+import { useEffect, useRef, useState } from 'react';
 import { Alert, Image, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 import products from '@/constants/products';
@@ -86,12 +87,33 @@ const searchSuggestions = ['Serum Vitamin C', 'Kem dưỡng ẩm', 'Sữa rửa 
 const searchHistory = ['Serum', 'Kem chống nắng'];
 
 export default function HomeScreen() {
-  const { addToCart } = useCart();
+  const { addToCart, cart } = useCart();
   const { addFavorite, removeFavorite, isFavorite } = useFavorites();
   const { user } = useAuth();
   const router = useRouter();
   const [searchText, setSearchText] = useState('');
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
+  const [bannerIndex, setBannerIndex] = useState(0);
+  const bannerRef = useRef<ScrollView | null>(null);
+
+  const [pickedImageUri, setPickedImageUri] = useState<string | null>(null);
+  const [imageSearching, setImageSearching] = useState(false);
+  const [imageSearchResults, setImageSearchResults] = useState<typeof products>([] as typeof products);
+
+  // Auto-play settings
+  const SLIDE_WIDTH = 292; // banner width (280) + marginRight (12)
+  const SLIDE_INTERVAL = 4000; // ms
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setBannerIndex((prev) => {
+        const next = (prev + 1) % banners.length;
+        bannerRef.current?.scrollTo({ x: next * SLIDE_WIDTH, animated: true });
+        return next;
+      });
+    }, SLIDE_INTERVAL);
+    return () => clearInterval(timer);
+  }, []);
 
   const handleAddToCart = (product: typeof products[0]) => {
     addToCart({
@@ -103,6 +125,8 @@ export default function HomeScreen() {
     });
     Alert.alert('Thành công', `${product.name} đã được thêm vào giỏ hàng`);
   };
+
+  const headerCartCount = cart.reduce((sum, it) => sum + (it.qty || 0), 0);
 
   const handleToggleFavorite = (product: typeof products[0]) => {
     if (isFavorite(product.id)) {
@@ -140,7 +164,7 @@ export default function HomeScreen() {
       onPress={() => router.push(`/product/${item.id}`)}
     >
       <View style={{ position: 'relative', height: 140, backgroundColor: '#f5f5f5', overflow: 'hidden' }}>
-        <Image source={{ uri: item.image }} style={{ width: '100%', height: '100%' }} />
+      <Image source={typeof item.image === 'string' ? { uri: item.image } : item.image} style={{ width: '100%', height: '100%' }} />
         {item.discount > 0 && (
           <LinearGradient
             colors={["#ff5722", "#ff7043"]}
@@ -149,11 +173,11 @@ export default function HomeScreen() {
             <Text style={{ fontSize: 10, fontWeight: '800', color: '#fff' }}>-{item.discount}%</Text>
           </LinearGradient>
         )}
-        <TouchableOpacity 
+          <TouchableOpacity 
           style={{ position: 'absolute', top: 8, left: 8, backgroundColor: '#ffffff90', width: 28, height: 28, borderRadius: 14, justifyContent: 'center', alignItems: 'center' }}
           onPress={() => handleToggleFavorite(item)}
         >
-          <Heart color="#ff6b9d" size={16} fill={isFavorite(item.id) ? '#ff6b9d' : 'transparent'} strokeWidth={2} />
+          <Heart color="#C9A6FF" size={16} fill={isFavorite(item.id) ? '#C9A6FF' : 'transparent'} strokeWidth={2} />
         </TouchableOpacity>
       </View>
       <View style={{ padding: 10 }}>
@@ -162,9 +186,9 @@ export default function HomeScreen() {
           <Star size={12} color="#ffb300" fill="#ffb300" />
           <Text style={{ marginLeft: 3, fontSize: 11, fontWeight: '600', color: '#666' }}>{item.rating}</Text>
         </View>
-        <Text style={{ marginTop: 8, fontWeight: '800', fontSize: 13, color: '#ff6b9d' }}>{item.price}đ</Text>
+        <Text style={{ marginTop: 8, fontWeight: '800', fontSize: 13, color: AppColors.primary }}>{item.price}đ</Text>
         <TouchableOpacity 
-          style={{ marginTop: 8, backgroundColor: '#ff6b9d', paddingVertical: 6, borderRadius: 8, alignItems: 'center' }}
+          style={{ marginTop: 8, backgroundColor: AppColors.primaryDark, paddingVertical: 6, borderRadius: 8, alignItems: 'center' }}
           onPress={() => handleAddToCart(item)}
         >
           <Text style={{ fontSize: 11, fontWeight: '700', color: '#fff' }}>Thêm vào giỏ</Text>
@@ -177,7 +201,7 @@ export default function HomeScreen() {
     <ScrollView style={{ flex: 1, backgroundColor: '#faf9f8' }} showsVerticalScrollIndicator={false}>
       {/* ====== HEADER / APP BAR ====== */}
       <LinearGradient
-        colors={["#ff6b9d", "#c44569"]}
+        colors={[AppColors.primary, AppColors.primaryLight]}
         style={{ paddingHorizontal: 16, paddingTop: 44, paddingBottom: 20, borderBottomLeftRadius: 24, borderBottomRightRadius: 24 }}
       >
         {/* Top Row: Logo, Menu, Cart, Notification */}
@@ -188,7 +212,7 @@ export default function HomeScreen() {
               <Menu size={20} color="#fff" strokeWidth={2} />
             </TouchableOpacity>
             {/* Logo / Brand */}
-            <Text style={{ fontSize: 18, fontWeight: '800', color: '#fff' }}>💄 BeautyShop</Text>
+            <Text style={{ fontSize: 18, fontWeight: '800', color: '#fff' }}>🌸 Fiora Luxe</Text>
           </View>
 
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
@@ -204,8 +228,8 @@ export default function HomeScreen() {
             >
               <ShoppingCart size={20} color="#fff" strokeWidth={1.5} />
               {/* Badge */}
-              <View style={{ position: 'absolute', top: 2, right: 2, backgroundColor: '#ff5722', borderRadius: 10, width: 18, height: 18, justifyContent: 'center', alignItems: 'center' }}>
-                <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700' }}>3</Text>
+              <View style={{ position: 'absolute', top: 2, right: 2, backgroundColor: '#ff5722', borderRadius: 10, minWidth: 18, height: 18, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 4 }}>
+                <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700' }}>{headerCartCount}</Text>
               </View>
             </TouchableOpacity>
 
@@ -234,7 +258,7 @@ export default function HomeScreen() {
         {/* SEARCH BAR WITH DROPDOWN */}
         <View style={{ marginTop: 8 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 6, elevation: 3 }}>
-            <Search size={20} color="#ff6b9d" strokeWidth={2} />
+            <Search size={20} color={AppColors.primary} strokeWidth={2} />
             <TextInput 
               placeholder="Tìm sản phẩm, thương hiệu…" 
               placeholderTextColor="#ccc" 
@@ -302,9 +326,9 @@ export default function HomeScreen() {
           >
             <Image source={banner.image} style={{ width: '100%', height: '100%' }} />
             <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#00000040', paddingHorizontal: 16, paddingVertical: 12 }}>
-              <TouchableOpacity style={{ backgroundColor: '#ff6b9d', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, alignSelf: 'flex-start' }}>
-                <Text style={{ fontSize: 11, fontWeight: '600', color: '#fff' }}>Shop Now →</Text>
-              </TouchableOpacity>
+              <TouchableOpacity style={{ backgroundColor: AppColors.primary, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, alignSelf: 'flex-start' }}>
+                    <Text style={{ fontSize: 11, fontWeight: '600', color: '#fff' }}>Shop Now →</Text>
+                  </TouchableOpacity>
             </View>
           </TouchableOpacity>
         ))}
@@ -315,8 +339,8 @@ export default function HomeScreen() {
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
           <Text style={{ fontSize: 16, fontWeight: '800', color: '#333' }}>Danh Mục</Text>
           <TouchableOpacity>
-            <Text style={{ fontSize: 12, fontWeight: '600', color: '#ff6b9d' }}>Xem tất cả →</Text>
-          </TouchableOpacity>
+              <Text style={{ fontSize: 12, fontWeight: '600', color: AppColors.primary }}>Xem tất cả →</Text>
+            </TouchableOpacity>
         </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -16, paddingHorizontal: 16 }}>
           {categories.map((cat, idx) => (
@@ -331,96 +355,57 @@ export default function HomeScreen() {
         </ScrollView>
       </View>
 
-      {/* ====== FLASH SALE ====== */}
+      {/* ====== FLASH SALE removed per request ====== */}
+
+      {/* ====== VOUCHERS (compact horizontal) ====== */}
       <View style={{ marginHorizontal: 16, marginTop: 24 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12, gap: 8 }}>
-          <Flame size={22} color="#ff5722" />
-          <Text style={{ fontSize: 16, fontWeight: '800', color: '#333' }}>Flash Sale</Text>
-          <Text style={{ fontSize: 12, fontWeight: '600', color: '#ff5722' }}>Hết 18:00</Text>
+          <Gift size={20} color={AppColors.primary} />
+          <Text style={{ fontSize: 15, fontWeight: '800', color: '#333' }}>Vouchers</Text>
         </View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -16, paddingHorizontal: 16 }}>
-          {products.filter(p => p.discount > 15).slice(0, 4).map((item, idx) => (
-            <TouchableOpacity
-              key={idx}
-              style={{ width: 140, marginRight: 12, backgroundColor: '#fff', borderRadius: 12, overflow: 'hidden', shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 4, elevation: 2 }}
-              onPress={() => router.push(`/product/${item.id}`)}
-            >
-              <View style={{ position: 'relative', height: 120, backgroundColor: '#f5f5f5' }}>
-                <Image source={{ uri: item.image }} style={{ width: '100%', height: '100%' }} />
-                <LinearGradient colors={["#ff5722", "#ff7043"]} style={{ position: 'absolute', top: 6, right: 6, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 }}>
-                  <Text style={{ fontSize: 9, fontWeight: '800', color: '#fff' }}>-{item.discount}%</Text>
-                </LinearGradient>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ paddingVertical: 4 }}>
+          {vouchers.map((voucher, idx) => (
+            <TouchableOpacity key={idx} style={{ width: 220, height: 84, marginRight: 12, borderRadius: 12, overflow: 'hidden', backgroundColor: '#fff', shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6, elevation: 2 }}>
+              <Image source={voucher.image} style={{ width: '100%', height: '100%' }} />
+              <View style={{ position: 'absolute', left: 12, top: 10 }}>
+                <Text style={{ fontSize: 12, fontWeight: '800', color: '#fff' }}>{voucher.discount}</Text>
+                <Text style={{ fontSize: 11, color: '#fff', marginTop: 4 }}>{voucher.minSpend}</Text>
               </View>
-              <View style={{ padding: 8 }}>
-                <Text style={{ fontWeight: '600', fontSize: 11, color: '#333' }} numberOfLines={1}>{item.name}</Text>
-                <Text style={{ marginTop: 4, fontWeight: '700', fontSize: 12, color: '#ff6b9d' }}>{item.price}đ</Text>
+              <View style={{ position: 'absolute', right: 10, bottom: 10 }}>
+                <TouchableOpacity style={{ backgroundColor: AppColors.primary, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 }}>
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#fff' }}>{voucher.code}</Text>
+                </TouchableOpacity>
               </View>
             </TouchableOpacity>
           ))}
         </ScrollView>
       </View>
 
-      {/* ====== VOUCHERS ====== */}
-      <View style={{ marginHorizontal: 16, marginTop: 24 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12, gap: 8 }}>
-          <Gift size={22} color="#ff6b9d" />
-          <Text style={{ fontSize: 16, fontWeight: '800', color: '#333' }}>Vouchers</Text>
-        </View>
-        {vouchers.map((voucher, idx) => (
-          <TouchableOpacity
-            key={idx}
-            style={{ marginBottom: 10, backgroundColor: '#fff', borderRadius: 12, overflow: 'hidden', height: 120, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 }}
-          >
-            <Image source={voucher.image} style={{ width: '100%', height: '100%' }} />
-            <View style={{ position: 'absolute', bottom: 10, right: 10 }}>
-              <TouchableOpacity style={{ backgroundColor: '#ff6b9d', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}>
-                <Text style={{ fontSize: 11, fontWeight: '600', color: '#fff' }}>{voucher.code}</Text>
-              </TouchableOpacity>
-            </View>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {/* ====== FEATURED COLLECTIONS ====== */}
-      <View style={{ marginHorizontal: 16, marginTop: 24 }}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-          <Text style={{ fontSize: 16, fontWeight: '800', color: '#333' }}>Bộ Sưu Tập Nổi Bật</Text>
-          <TouchableOpacity>
-            <Text style={{ fontSize: 12, fontWeight: '600', color: '#ff6b9d' }}>Xem tất cả →</Text>
-          </TouchableOpacity>
-        </View>
-        <LinearGradient colors={["#667eea", "#764ba2"]} style={{ borderRadius: 14, height: 100, padding: 16, marginBottom: 10, justifyContent: 'space-between' }}>
-          <Text style={{ fontSize: 14, fontWeight: '700', color: '#fff' }}>Summer Collection</Text>
-          <TouchableOpacity style={{ backgroundColor: '#ffffff30', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 20, alignSelf: 'flex-start' }}>
-            <Text style={{ fontSize: 11, fontWeight: '600', color: '#fff' }}>Explore →</Text>
-          </TouchableOpacity>
-        </LinearGradient>
-        <LinearGradient colors={["#f093fb", "#f5576c"]} style={{ borderRadius: 14, height: 100, padding: 16, justifyContent: 'space-between' }}>
-          <Text style={{ fontSize: 14, fontWeight: '700', color: '#fff' }}>Premium Brands</Text>
-          <TouchableOpacity style={{ backgroundColor: '#ffffff30', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 20, alignSelf: 'flex-start' }}>
-            <Text style={{ fontSize: 11, fontWeight: '600', color: '#fff' }}>Explore →</Text>
-          </TouchableOpacity>
-        </LinearGradient>
-      </View>
+      {/* ====== FEATURED COLLECTIONS removed per request ====== */}
 
       {/* ====== BEST SELLERS ====== */}
       <View style={{ marginHorizontal: 16, marginTop: 24 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12, gap: 8 }}>
-          <TrendingUp size={22} color="#ff6b9d" />
+          <TrendingUp size={22} color={AppColors.primary} />
           <Text style={{ fontSize: 16, fontWeight: '800', color: '#333' }}>Sản Phẩm Bán Chạy</Text>
         </View>
-        {products.filter(p => p.isBestseller).slice(0, 3).map((item, idx) => (
+        {products.filter(p => p.isBestseller).slice(0, 5).map((item, idx) => (
           <TouchableOpacity
             key={idx}
             style={{ marginBottom: 12, backgroundColor: '#fff', borderRadius: 12, flexDirection: 'row', overflow: 'hidden', shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 }}
             onPress={() => router.push(`/product/${item.id}`)}
           >
-            <Image source={{ uri: item.image }} style={{ width: 100, height: 100 }} />
+            <View style={{ position: 'relative' }}>
+              <Image source={typeof item.image === 'string' ? { uri: item.image } : item.image} style={{ width: 100, height: 100 }} />
+              <View style={{ position: 'absolute', left: 8, top: 8, backgroundColor: AppColors.primary, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 }}>
+                <Text style={{ color: '#fff', fontWeight: '800', fontSize: 12 }}>{idx + 1}</Text>
+              </View>
+            </View>
             <View style={{ flex: 1, padding: 12, justifyContent: 'space-between' }}>
               <Text style={{ fontSize: 13, fontWeight: '700', color: '#333' }} numberOfLines={2}>{item.name}</Text>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Text style={{ fontWeight: '800', fontSize: 13, color: '#ff6b9d' }}>{item.price}đ</Text>
-                <TouchableOpacity style={{ backgroundColor: '#ff6b9d', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 }} onPress={() => handleAddToCart(item)}>
+                <Text style={{ fontWeight: '800', fontSize: 13, color: AppColors.primary }}>{item.price}đ</Text>
+                <TouchableOpacity style={{ backgroundColor: AppColors.primaryDark, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 }} onPress={() => handleAddToCart(item)}>
                   <Text style={{ fontSize: 10, fontWeight: '600', color: '#fff' }}>Mua</Text>
                 </TouchableOpacity>
               </View>
@@ -433,7 +418,7 @@ export default function HomeScreen() {
       <View style={{ marginHorizontal: 16, marginTop: 24 }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <Sparkles size={22} color="#ff6b9d" />
+            <Sparkles size={22} color="#C9A6FF" />
             <Text style={{ fontSize: 16, fontWeight: '800', color: '#333' }}>Gợi ý Hôm Nay</Text>
           </View>
         </View>
@@ -453,8 +438,8 @@ export default function HomeScreen() {
       <View style={{ marginHorizontal: 16, marginTop: 24 }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
           <Text style={{ fontSize: 16, fontWeight: '800', color: '#333' }}>Thương Hiệu Nổi Bật</Text>
-          <TouchableOpacity>
-            <Text style={{ fontSize: 12, fontWeight: '600', color: '#ff6b9d' }}>Xem tất cả →</Text>
+            <TouchableOpacity>
+            <Text style={{ fontSize: 12, fontWeight: '600', color: AppColors.primary }}>Xem tất cả →</Text>
           </TouchableOpacity>
         </View>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginBottom: 12 }}>
@@ -477,12 +462,12 @@ export default function HomeScreen() {
                 <Text style={{ fontSize: 36, marginRight: 10 }}>{brand.logo}</Text>
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontSize: 13, fontWeight: '800', color: '#222' }}>{brand.name}</Text>
-                  <Text style={{ fontSize: 11, color: '#ff6b9d', fontWeight: '600', marginTop: 2 }}>{brand.description}</Text>
+                  <Text style={{ fontSize: 11, color: AppColors.primary, fontWeight: '600', marginTop: 2 }}>{brand.description}</Text>
                 </View>
               </View>
               <Text style={{ fontSize: 10, color: '#888', marginBottom: 8 }}>{brand.products}</Text>
               <LinearGradient
-                colors={['#ff6b9d', '#ff4a86']}
+                colors={AppColors.brandGradient}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={{ paddingVertical: 6, paddingHorizontal: 10, borderRadius: 8 }}
@@ -502,7 +487,7 @@ export default function HomeScreen() {
             <Text style={{ fontSize: 16, fontWeight: '800', color: '#333' }}>Video Hướng Dẫn</Text>
           </View>
           <TouchableOpacity>
-            <Text style={{ fontSize: 12, fontWeight: '600', color: '#ff6b9d' }}>Xem tất cả →</Text>
+            <Text style={{ fontSize: 12, fontWeight: '600', color: '#C9A6FF' }}>Xem tất cả →</Text>
           </TouchableOpacity>
         </View>
         {videoArticles.map((video: any, idx: number) => (
@@ -529,7 +514,7 @@ export default function HomeScreen() {
                   width: 48,
                   height: 48,
                   borderRadius: 24,
-                  backgroundColor: '#ff6b9d',
+                  backgroundColor: '#C9A6FF',
                   justifyContent: 'center',
                   alignItems: 'center',
                 }}
@@ -562,7 +547,7 @@ export default function HomeScreen() {
                     borderRadius: 6,
                   }}
                 >
-                  <Text style={{ fontSize: 10, fontWeight: '700', color: '#ff6b9d' }}>{video.category}</Text>
+                  <Text style={{ fontSize: 10, fontWeight: '700', color: '#C9A6FF' }}>{video.category}</Text>
                 </View>
               </View>
               <Text style={{ fontSize: 13, fontWeight: '800', color: '#222', marginBottom: 8, lineHeight: 18 }}>
@@ -573,12 +558,12 @@ export default function HomeScreen() {
                   <Text style={{ fontSize: 11, fontWeight: '600', color: '#333' }}>{video.creator}</Text>
                   <View style={{ flexDirection: 'row', gap: 10, marginTop: 4 }}>
                     <Text style={{ fontSize: 10, color: '#888' }}>👁 {video.views}</Text>
-                    <Text style={{ fontSize: 10, color: '#ff6b9d', fontWeight: '600' }}>❤️ {video.likes}</Text>
+                    <Text style={{ fontSize: 10, color: '#C9A6FF', fontWeight: '600' }}>❤️ {video.likes}</Text>
                   </View>
                 </View>
                 <TouchableOpacity
                   style={{
-                    backgroundColor: '#ff6b9d',
+                    backgroundColor: '#C9A6FF',
                     paddingHorizontal: 12,
                     paddingVertical: 6,
                     borderRadius: 8,

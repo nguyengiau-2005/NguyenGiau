@@ -1,3 +1,4 @@
+import { AppColors } from '@/constants/theme';
 import { useCart } from '@/contexts/CartContext';
 import { useFavorites } from '@/contexts/FavoritesContext';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -73,7 +74,7 @@ export default function FavoritesScreen() {
             Alert.alert('Đã xóa', `${item.name} đã bị xóa khỏi yêu thích`);
           }}
         >
-          <Heart color="#ff6b9d" size={16} fill="#ff6b9d" strokeWidth={2} />
+          <Heart color={AppColors.primary} size={16} fill={AppColors.primary} strokeWidth={2} />
         </TouchableOpacity>
       </View>
 
@@ -87,11 +88,11 @@ export default function FavoritesScreen() {
         </View>
 
         {/* Price */}
-        <Text style={{ fontWeight: '800', fontSize: 13, color: '#ff6b9d', marginBottom: 8 }}>{item.price.toLocaleString('vi-VN')}đ</Text>
+        <Text style={{ fontWeight: '800', fontSize: 13, color: AppColors.primary, marginBottom: 8 }}>{item.price.toLocaleString('vi-VN')}đ</Text>
 
         {/* Add to cart button */}
         <TouchableOpacity 
-          style={{ backgroundColor: '#ff6b9d', paddingVertical: 6, borderRadius: 8, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 4 }}
+          style={{ backgroundColor: AppColors.primaryDark, paddingVertical: 6, borderRadius: 8, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 4 }}
           onPress={() => handleAddToCart(item)}
         >
           <ShoppingCart size={12} color="#fff" strokeWidth={2} />
@@ -119,12 +120,12 @@ export default function FavoritesScreen() {
             </View>
             <Text style={{ fontSize: 11, color: '#999' }}>Có sẵn</Text>
           </View>
-          <Text style={{ fontWeight: '800', fontSize: 14, color: '#ff6b9d' }}>{item.price.toLocaleString('vi-VN')}đ</Text>
+          <Text style={{ fontWeight: '800', fontSize: 14, color: AppColors.primary }}>{item.price.toLocaleString('vi-VN')}đ</Text>
         </View>
 
         <View style={{ flexDirection: 'row', gap: 8 }}>
-          <TouchableOpacity 
-            style={{ flex: 1, backgroundColor: '#ff6b9d', paddingVertical: 6, borderRadius: 8, alignItems: 'center' }}
+            <TouchableOpacity 
+              style={{ flex: 1, backgroundColor: AppColors.primaryDark, paddingVertical: 6, borderRadius: 8, alignItems: 'center' }}
             onPress={() => handleAddToCart(item)}
           >
             <Text style={{ fontSize: 11, fontWeight: '700', color: '#fff' }}>Thêm giỏ</Text>
@@ -136,7 +137,7 @@ export default function FavoritesScreen() {
               Alert.alert('Đã xóa', `${item.name} đã bị xóa khỏi yêu thích`);
             }}
           >
-            <Heart color="#ff6b9d" size={14} fill="#ff6b9d" strokeWidth={2} />
+            <Heart color={AppColors.primary} size={14} fill={AppColors.primary} strokeWidth={2} />
           </TouchableOpacity>
         </View>
       </View>
@@ -146,7 +147,7 @@ export default function FavoritesScreen() {
   // Empty state
   if (!favorites || favorites.length === 0) {
     return (
-      <LinearGradient colors={["#ff6b9d", "#c44569"]} style={{ flex: 1 }}>
+      <LinearGradient colors={[AppColors.primary, AppColors.primaryLight]} style={{ flex: 1 }}>
         <View style={{ paddingHorizontal: 16, paddingTop: 44, paddingBottom: 16 }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
             <TouchableOpacity onPress={() => router.back()}>
@@ -169,7 +170,7 @@ export default function FavoritesScreen() {
             style={{ marginTop: 32, backgroundColor: '#fff', paddingHorizontal: 32, paddingVertical: 12, borderRadius: 12 }}
             onPress={() => router.push('/(tabs)')}
           >
-            <Text style={{ fontSize: 15, fontWeight: '700', color: '#ff6b9d' }}>Khám phá ngay</Text>
+            <Text style={{ fontSize: 15, fontWeight: '700', color: AppColors.primary }}>Khám phá ngay</Text>
           </TouchableOpacity>
         </ScrollView>
       </LinearGradient>
@@ -180,7 +181,7 @@ export default function FavoritesScreen() {
     <View style={{ flex: 1, backgroundColor: '#faf9f8' }}>
       {/* ====== HEADER ====== */}
       <LinearGradient
-        colors={["#ff6b9d", "#c44569"]}
+        colors={[AppColors.primary, AppColors.primaryLight]}
         style={{ paddingHorizontal: 16, paddingTop: 44, paddingBottom: 16 }}
       >
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
@@ -215,11 +216,11 @@ export default function FavoritesScreen() {
                     paddingHorizontal: 10, 
                     paddingVertical: 6, 
                     borderRadius: 8,
-                    backgroundColor: sortBy === option.value ? '#ff6b9d' : '#ffe8f0'
+                    backgroundColor: sortBy === option.value ? AppColors.primary : '#ffe8f0'
                   }}
                   onPress={() => handleSort(option.value as SortOption)}
                 >
-                  <Text style={{ fontSize: 11, fontWeight: '600', color: sortBy === option.value ? '#fff' : '#ff6b9d' }}>
+                  <Text style={{ fontSize: 11, fontWeight: '600', color: sortBy === option.value ? '#fff' : AppColors.primary }}>
                     {option.label}
                   </Text>
                 </TouchableOpacity>
@@ -235,11 +236,11 @@ export default function FavoritesScreen() {
                 paddingVertical: 8, 
                 borderRadius: 8, 
                 alignItems: 'center',
-                backgroundColor: viewMode === 'grid' ? '#ff6b9d' : '#ffe8f0'
+                backgroundColor: viewMode === 'grid' ? AppColors.primary : '#ffe8f0'
               }}
               onPress={() => setViewMode('grid')}
             >
-              <Text style={{ fontSize: 12, fontWeight: '600', color: viewMode === 'grid' ? '#fff' : '#ff6b9d' }}>⊞ Lưới</Text>
+              <Text style={{ fontSize: 12, fontWeight: '600', color: viewMode === 'grid' ? '#fff' : AppColors.primary }}>⊞ Lưới</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={{ 
@@ -247,11 +248,11 @@ export default function FavoritesScreen() {
                 paddingVertical: 8, 
                 borderRadius: 8, 
                 alignItems: 'center',
-                backgroundColor: viewMode === 'list' ? '#ff6b9d' : '#ffe8f0'
+                backgroundColor: viewMode === 'list' ? AppColors.primary : '#ffe8f0'
               }}
               onPress={() => setViewMode('list')}
             >
-              <Text style={{ fontSize: 12, fontWeight: '600', color: viewMode === 'list' ? '#fff' : '#ff6b9d' }}>☰ Danh sách</Text>
+              <Text style={{ fontSize: 12, fontWeight: '600', color: viewMode === 'list' ? '#fff' : AppColors.primary }}>☰ Danh sách</Text>
             </TouchableOpacity>
           </View>
         </View>

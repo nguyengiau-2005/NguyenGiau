@@ -1,7 +1,7 @@
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Fonts } from '@/constants/theme';
-import { useAuth } from '@/contexts/AuthContext';
+import { AppColors, Fonts } from '@/constants/theme';
+import { useAuth } from '@/contexts/Auth';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { Eye, EyeOff, Lock, Mail, User } from 'lucide-react-native';
@@ -61,7 +61,7 @@ export default function SignupScreen() {
     >
       <ScrollView style={{ flex: 1 }} bounces={false}>
         <LinearGradient
-          colors={['#ff6699', '#ffb3d9']}
+          colors={[AppColors.primary, AppColors.primaryLight]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.header}
@@ -70,7 +70,7 @@ export default function SignupScreen() {
             Tạo Tài Khoản
           </ThemedText>
           <ThemedText style={styles.headerSubtitle}>
-            Tham gia BeautyShop ngay hôm nay
+            Tham gia Fiora Luxe ngay hôm nay
           </ThemedText>
         </LinearGradient>
 
@@ -78,13 +78,13 @@ export default function SignupScreen() {
           {/* Full Name Input */}
           <View style={styles.inputWrapper}>
             <View style={styles.inputLabel}>
-              <User size={18} color="#ff6699" />
+              <User size={18} color={AppColors.primaryDark} />
               <ThemedText style={styles.labelText}>Họ và tên</ThemedText>
             </View>
             <TextInput
               style={styles.input}
               placeholder="Nhập họ và tên"
-              placeholderTextColor="#999"
+              placeholderTextColor={AppColors.textMuted}
               value={fullName}
               onChangeText={setFullName}
               editable={!isLoading}
@@ -94,13 +94,13 @@ export default function SignupScreen() {
           {/* Email Input */}
           <View style={styles.inputWrapper}>
             <View style={styles.inputLabel}>
-              <Mail size={18} color="#ff6699" />
+              <Mail size={18} color={AppColors.primaryDark} />
               <ThemedText style={styles.labelText}>Email</ThemedText>
             </View>
             <TextInput
               style={styles.input}
               placeholder="Nhập email"
-              placeholderTextColor="#999"
+              placeholderTextColor={AppColors.textMuted}
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
@@ -111,7 +111,7 @@ export default function SignupScreen() {
           {/* Password Input */}
           <View style={styles.inputWrapper}>
             <View style={styles.inputLabel}>
-              <Lock size={18} color="#ff6699" />
+              <Lock size={18} color={AppColors.primaryDark} />
               <ThemedText style={styles.labelText}>Mật khẩu</ThemedText>
             </View>
             <View style={styles.passwordContainer}>
@@ -129,9 +129,9 @@ export default function SignupScreen() {
                 disabled={isLoading}
               >
                 {showPassword ? (
-                  <Eye size={20} color="#ff6699" />
+                  <Eye size={20} color={AppColors.primaryDark} />
                 ) : (
-                  <EyeOff size={20} color="#ccc" />
+                  <EyeOff size={20} color={AppColors.textMuted} />
                 )}
               </TouchableOpacity>
             </View>
@@ -158,9 +158,9 @@ export default function SignupScreen() {
                 disabled={isLoading}
               >
                 {showConfirmPassword ? (
-                  <Eye size={20} color="#ff6699" />
+                  <Eye size={20} color={AppColors.primaryDark} />
                 ) : (
-                  <EyeOff size={20} color="#ccc" />
+                  <EyeOff size={20} color={AppColors.textMuted} />
                 )}
               </TouchableOpacity>
             </View>
@@ -181,7 +181,7 @@ export default function SignupScreen() {
           <View style={styles.loginContainer}>
             <ThemedText style={styles.loginText}>Đã có tài khoản? </ThemedText>
             <TouchableOpacity onPress={() => router.back()}>
-              <ThemedText style={styles.loginLink}>Đăng nhập</ThemedText>
+              <ThemedText style={[styles.loginLink, { color: AppColors.primaryDark }]}>Đăng nhập</ThemedText>
             </TouchableOpacity>
           </View>
 
@@ -208,7 +208,7 @@ const styles = StyleSheet.create({
     fontSize: 28,
   },
   headerSubtitle: {
-    color: 'rgba(255,255,255,0.8)',
+    color: 'rgba(255,255,255,0.9)',
     fontSize: 13,
   },
   container: {
@@ -231,21 +231,21 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 2,
-    borderColor: '#FFE8ED',
+    borderColor: AppColors.primaryLight,
     borderRadius: 12,
     paddingVertical: 12,
     paddingHorizontal: 16,
     fontSize: 14,
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
   },
   passwordContainer: {
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
     borderWidth: 2,
-    borderColor: '#FFE8ED',
+    borderColor: AppColors.primaryLight,
     borderRadius: 12,
     paddingHorizontal: 16,
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
   },
   passwordInput: {
     flex: 1,
@@ -253,14 +253,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   signupBtn: {
-    backgroundColor: '#ff6699',
+    backgroundColor: AppColors.primaryDark,
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center' as const,
     marginTop: 10,
     marginBottom: 20,
-    shadowColor: '#ff6699',
-    shadowOpacity: 0.3,
+    shadowColor: AppColors.primaryDark,
+    shadowOpacity: 0.25,
     shadowRadius: 10,
     elevation: 5,
   },
@@ -268,7 +268,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   signupBtnText: {
-    color: '#fff',
+    color: AppColors.onPrimary,
     fontSize: 16,
     fontWeight: '700' as const,
   },
@@ -284,7 +284,7 @@ const styles = StyleSheet.create({
   },
   loginLink: {
     fontSize: 13,
-    color: '#ff6699',
+    color: AppColors.primaryDark,
     fontWeight: '700' as const,
   },
   termsText: {

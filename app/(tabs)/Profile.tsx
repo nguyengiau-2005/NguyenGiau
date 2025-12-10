@@ -1,7 +1,9 @@
-import { useAuth } from '@/contexts/AuthContext';
+import { AppColors } from '@/constants/theme';
+import { useAuth } from '@/contexts/Auth';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { AlertCircle, Bell, ChevronRight, CreditCard, Edit3, FileText, Gift, Globe, Heart, HelpCircle, History, Info, Lock, LogOut, MapPin, MessageSquare, Moon, Package, Settings, ShoppingCart, Wallet } from 'lucide-react-native';
+import React, { useEffect, useState } from 'react';
 import { Alert, Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
 export default function ProfileScreen() {
@@ -29,10 +31,30 @@ export default function ProfileScreen() {
     ]);
   };
 
+  const [chatUnread, setChatUnread] = useState(0);
+
+  useEffect(() => {
+    // load simple unread count from support chat history (non-user messages)
+    (async () => {
+      try {
+        // optional dependency
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+        const raw = await AsyncStorage.getItem('support_chat_history_v1');
+        if (raw) {
+          const msgs = JSON.parse(raw) as Array<{ sender?: string }>;
+          const count = msgs.filter(m => m.sender && m.sender !== 'user').length;
+          setChatUnread(count);
+        }
+      } catch (e) {
+        // ignore if AsyncStorage not present
+      }
+    })();
+  }, []);
   // Not logged in state
   if (!user) {
     return (
-      <LinearGradient colors={["#ff6b9d", "#c44569"]} style={{ flex: 1 }}>
+      <LinearGradient colors={[AppColors.primary, AppColors.primaryLight]} style={{ flex: 1 }}>
         <View style={{ paddingHorizontal: 16, paddingTop: 44, paddingBottom: 16 }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
             <Text style={{ fontSize: 18, fontWeight: '800', color: '#fff' }}>Tài Khoản</Text>
@@ -54,15 +76,15 @@ export default function ProfileScreen() {
             </View>
             <Text style={{ fontSize: 20, fontWeight: '800', color: '#fff', marginBottom: 12 }}>Bạn chưa đăng nhập</Text>
             <Text style={{ fontSize: 14, color: '#ffffff80', textAlign: 'center', marginBottom: 32 }}>Đăng nhập để quản lý đơn hàng, yêu thích và nhận ưu đãi đặc biệt</Text>
-            
-            <TouchableOpacity 
+
+            <TouchableOpacity
               style={{ width: '100%', backgroundColor: '#fff', paddingVertical: 14, borderRadius: 12, alignItems: 'center', marginBottom: 12 }}
               onPress={() => router.push('/auth/login')}
             >
-              <Text style={{ fontSize: 15, fontWeight: '700', color: '#ff6b9d' }}>Đăng Nhập</Text>
+              <Text style={{ fontSize: 15, fontWeight: '700', color: AppColors.primary }}>Đăng Nhập</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity 
+            <TouchableOpacity
               style={{ width: '100%', backgroundColor: 'transparent', borderWidth: 2, borderColor: '#fff', paddingVertical: 12, borderRadius: 12, alignItems: 'center' }}
               onPress={() => router.push('/auth/signup')}
             >
@@ -78,7 +100,7 @@ export default function ProfileScreen() {
     <View style={{ flex: 1, backgroundColor: '#faf9f8' }}>
       {/* ====== HEADER ====== */}
       <LinearGradient
-        colors={["#ff6b9d", "#c44569"]}
+        colors={[AppColors.primary, AppColors.primaryLight]}
         style={{ paddingHorizontal: 16, paddingTop: 44, paddingBottom: 20 }}
       >
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
@@ -90,7 +112,7 @@ export default function ProfileScreen() {
             <TouchableOpacity style={{ backgroundColor: '#ffffff20', padding: 8, borderRadius: 12 }}>
               <Bell size={20} color="#fff" strokeWidth={2} />
             </TouchableOpacity>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={{ backgroundColor: '#ffffff20', padding: 8, borderRadius: 12 }}
               onPress={() => router.push('/(tabs)/Cart')}
             >
@@ -105,15 +127,15 @@ export default function ProfileScreen() {
         <View style={{ marginHorizontal: 16, marginTop: 16 }}>
           <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 16, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 8, elevation: 3 }}>
             <View style={{ flexDirection: 'row', gap: 12, marginBottom: 16 }}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={{ position: 'relative' }}
                 onPress={() => router.push('/user/edit-profile' as any)}
               >
-                <Image 
-                  source={{ uri: user.avatar || 'https://via.placeholder.com/80' }} 
-                  style={{ width: 70, height: 70, borderRadius: 35, borderWidth: 3, borderColor: '#ff6b9d' }} 
+                <Image
+                  source={{ uri: user.avatar || 'https://via.placeholder.com/80' }}
+                  style={{ width: 70, height: 70, borderRadius: 35, borderWidth: 3, borderColor: AppColors.primary }}
                 />
-                <View style={{ position: 'absolute', bottom: 0, right: 0, backgroundColor: '#ff6b9d', width: 24, height: 24, borderRadius: 12, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#fff' }}>
+                <View style={{ position: 'absolute', bottom: 0, right: 0, backgroundColor: AppColors.primary, width: 24, height: 24, borderRadius: 12, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#fff' }}>
                   <Edit3 size={12} color="#fff" strokeWidth={2} />
                 </View>
               </TouchableOpacity>
@@ -125,13 +147,13 @@ export default function ProfileScreen() {
                   {user.phone && <Text style={{ fontSize: 12, color: '#999' }}>{user.phone}</Text>}
                 </View>
                 <View style={{ backgroundColor: '#ffe8f0', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, alignSelf: 'flex-start' }}>
-                  <Text style={{ fontSize: 11, fontWeight: '600', color: '#ff6b9d' }}>👑 Thành viên</Text>
+                  <Text style={{ fontSize: 11, fontWeight: '600', color: AppColors.primary }}>👑 Thành viên</Text>
                 </View>
               </View>
             </View>
 
-            <TouchableOpacity 
-              style={{ backgroundColor: '#ff6b9d', paddingVertical: 10, borderRadius: 10, alignItems: 'center' }}
+            <TouchableOpacity
+              style={{ backgroundColor: AppColors.primary, paddingVertical: 10, borderRadius: 10, alignItems: 'center' }}
               onPress={() => router.push('/user/edit-profile' as any)}
             >
               <Text style={{ fontSize: 13, fontWeight: '700', color: '#fff' }}>Chỉnh Sửa Hồ Sơ</Text>
@@ -142,35 +164,35 @@ export default function ProfileScreen() {
         {/* ====== QUICK ACTIONS ====== */}
         <View style={{ marginHorizontal: 16, marginTop: 20 }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 12 }}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={{ flex: 1, backgroundColor: '#fff', padding: 14, borderRadius: 12, alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 }}
               onPress={() => router.push('/user/order-history' as any)}
             >
-              <Package size={28} color="#ff6b9d" strokeWidth={1.5} />
+              <Package size={28} color={AppColors.primary} strokeWidth={1.5} />
               <Text style={{ fontSize: 11, fontWeight: '600', color: '#333', marginTop: 6, textAlign: 'center' }}>Đơn hàng</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity 
+            <TouchableOpacity
               style={{ flex: 1, backgroundColor: '#fff', padding: 14, borderRadius: 12, alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 }}
               onPress={() => Alert.alert('Ví', 'Số dư: 0đ')}
             >
-              <Wallet size={28} color="#ff6b9d" strokeWidth={1.5} />
+              <Wallet size={28} color={AppColors.primary} strokeWidth={1.5} />
               <Text style={{ fontSize: 11, fontWeight: '600', color: '#333', marginTop: 6, textAlign: 'center' }}>Ví</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity 
+            <TouchableOpacity
               style={{ flex: 1, backgroundColor: '#fff', padding: 14, borderRadius: 12, alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 }}
               onPress={() => Alert.alert('Voucher', 'Bạn có 0 voucher')}
             >
-              <Gift size={28} color="#ff6b9d" strokeWidth={1.5} />
+              <Gift size={28} color={AppColors.primary} strokeWidth={1.5} />
               <Text style={{ fontSize: 11, fontWeight: '600', color: '#333', marginTop: 6, textAlign: 'center' }}>Voucher</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity 
+            <TouchableOpacity
               style={{ flex: 1, backgroundColor: '#fff', padding: 14, borderRadius: 12, alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 }}
               onPress={() => router.push('/(tabs)/Favorites')}
             >
-              <Heart size={28} color="#ff6b9d" strokeWidth={1.5} />
+              <Heart size={28} color={AppColors.primary} strokeWidth={1.5} />
               <Text style={{ fontSize: 11, fontWeight: '600', color: '#333', marginTop: 6, textAlign: 'center' }}>Yêu thích</Text>
             </TouchableOpacity>
           </View>
@@ -215,7 +237,7 @@ export default function ProfileScreen() {
               onPress={() => item.route ? router.push(item.route) : Alert.alert(item.label, 'Tính năng đang phát triển')}
             >
               <View style={{ width: 40, height: 40, borderRadius: 10, backgroundColor: '#ffe8f0', justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
-                <item.icon size={20} color="#ff6b9d" strokeWidth={1.5} />
+                <item.icon size={20} color={AppColors.primary} strokeWidth={1.5} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={{ fontSize: 13, fontWeight: '600', color: '#333' }}>{item.label}</Text>
@@ -240,7 +262,7 @@ export default function ProfileScreen() {
               onPress={() => item.route ? router.push(item.route) : Alert.alert(item.label, 'Tính năng đang phát triển')}
             >
               <View style={{ width: 40, height: 40, borderRadius: 10, backgroundColor: '#ffe8f0', justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
-                <item.icon size={20} color="#ff6b9d" strokeWidth={1.5} />
+                <item.icon size={20} color={AppColors.primary} strokeWidth={1.5} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={{ fontSize: 13, fontWeight: '600', color: '#333' }}>{item.label}</Text>
@@ -255,21 +277,34 @@ export default function ProfileScreen() {
           <Text style={{ fontSize: 14, fontWeight: '700', color: '#333', marginBottom: 10 }}>Hỗ trợ</Text>
 
           {[
-            { icon: HelpCircle, label: 'Trung tâm hỗ trợ', route: null },
-            { icon: AlertCircle, label: 'Câu hỏi thường gặp', route: null },
-            { icon: FileText, label: 'Chính sách đổi trả', route: null },
-            { icon: FileText, label: 'Điều khoản dịch vụ', route: null }
+            { icon: HelpCircle, label: 'Trung tâm hỗ trợ', route: '/support/help-center' },
+            { icon: MessageSquare, label: 'Chat với CSKH', route: '/support/chat' },
+            { icon: Info, label: 'Câu hỏi thường gặp (FAQ)', route: '/support/faq' },
+            { icon: FileText, label: 'Điều khoản & Chính sách', route: '/support/policy' },
+            { icon: FileText, label: 'Chính sách đổi trả', route: '/support/return_policy' }
           ].map((item, idx) => (
             <TouchableOpacity
               key={idx}
               style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', padding: 14, borderRadius: 12, marginBottom: 10, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 3, elevation: 1 }}
-              onPress={() => Alert.alert(item.label, 'Tính năng đang phát triển')}
+              onPress={() => {
+                if (item.route) {
+                  if (item.route === '/support/chat') setChatUnread(0);
+                  router.push(item.route as any);
+                } else {
+                  Alert.alert(item.label, 'Tính năng đang phát triển');
+                }
+              }}
             >
               <View style={{ width: 40, height: 40, borderRadius: 10, backgroundColor: '#ffe8f0', justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
-                <item.icon size={20} color="#ff6b9d" strokeWidth={1.5} />
+                <item.icon size={20} color={AppColors.primary} strokeWidth={1.5} />
               </View>
-              <View style={{ flex: 1 }}>
+              <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
                 <Text style={{ fontSize: 13, fontWeight: '600', color: '#333' }}>{item.label}</Text>
+                {item.label === 'Chat với CSKH' && chatUnread > 0 && (
+                  <View style={{ backgroundColor: '#ff3b30', minWidth: 24, height: 24, borderRadius: 12, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 6, marginLeft: 8 }}>
+                    <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>{chatUnread}</Text>
+                  </View>
+                )}
               </View>
               <ChevronRight size={20} color="#ccc" strokeWidth={2} />
             </TouchableOpacity>
@@ -293,7 +328,7 @@ export default function ProfileScreen() {
               onPress={() => Alert.alert(item.label, 'Tính năng đang phát triển')}
             >
               <View style={{ width: 40, height: 40, borderRadius: 10, backgroundColor: '#ffe8f0', justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
-                <item.icon size={20} color="#ff6b9d" strokeWidth={1.5} />
+                <item.icon size={20} color={AppColors.primary} strokeWidth={1.5} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={{ fontSize: 13, fontWeight: '600', color: '#333' }}>{item.label}</Text>
@@ -302,11 +337,36 @@ export default function ProfileScreen() {
               <ChevronRight size={20} color="#ccc" strokeWidth={2} />
             </TouchableOpacity>
           ))}
+
+          {/* Xem lại onboarding */}
+          <TouchableOpacity
+            style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', padding: 14, borderRadius: 12, marginBottom: 10, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 3, elevation: 1 }}
+            onPress={async () => {
+              try {
+                // eslint-disable-next-line @typescript-eslint/no-var-requires
+                const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+                await AsyncStorage.removeItem('welcome_seen');
+              } catch (e) {
+                // ignore if not available
+              }
+              // navigate to welcome screen (use an any-cast to avoid strict route typing here)
+              router.replace('/welcome' as any);
+            }}
+          >
+            <View style={{ width: 40, height: 40, borderRadius: 10, backgroundColor: '#ffe8f0', justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
+              <Info size={20} color={AppColors.primary} strokeWidth={1.5} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 13, fontWeight: '600', color: '#333' }}>Xem lại onboarding</Text>
+              <Text style={{ fontSize: 11, color: '#999', marginTop: 2 }}>Hiển thị lại màn hình chào mừng</Text>
+            </View>
+            <ChevronRight size={20} color="#ccc" strokeWidth={2} />
+          </TouchableOpacity>
         </View>
 
         {/* ====== LOGOUT BUTTON ====== */}
         <View style={{ marginHorizontal: 16, marginBottom: 40 }}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={{ backgroundColor: '#ff3b30', paddingVertical: 14, borderRadius: 12, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, shadowColor: '#ff3b30', shadowOpacity: 0.3, shadowRadius: 8, elevation: 5 }}
             onPress={handleLogout}
           >
@@ -314,8 +374,10 @@ export default function ProfileScreen() {
             <Text style={{ fontSize: 15, fontWeight: '700', color: '#fff' }}>Đăng Xuất</Text>
           </TouchableOpacity>
         </View>
+
       </ScrollView>
     </View>
+    
   );
 }
 

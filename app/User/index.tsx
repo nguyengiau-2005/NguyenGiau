@@ -1,3 +1,5 @@
+import { AppColors } from '@/constants/theme';
+import useDeviceLocation from '@/hooks/useDeviceLocation';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { ChevronRight } from 'lucide-react-native';
@@ -69,7 +71,7 @@ export default function UserProfileScreen() {
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       {/* Header Gradient */}
-      <LinearGradient colors={['#ff6b9d', '#c44569']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.header}>
+      <LinearGradient colors={[AppColors.primary, AppColors.primaryLight]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.header}>
         <View style={styles.headerContent}>
           <View style={styles.headerIcons}>
             <TouchableOpacity onPress={() => router.push('/user/edit-profile' as any)}>
@@ -105,6 +107,18 @@ export default function UserProfileScreen() {
         <View style={styles.userDetails}>
           <Text style={styles.fullName}>{userInfo.fullName}</Text>
           <Text style={styles.email}>{userInfo.email}</Text>
+          {/* show detected device address as suggestion */}
+          {(() => {
+            const { address: detectedAddress, loading: locationLoading, fetchLocation } = useDeviceLocation();
+            return detectedAddress ? (
+              <View style={{ marginTop: 8 }}>
+                <Text style={{ fontSize: 12, color: '#666' }}>Vị trí hiện tại: {locationLoading ? 'Đang lấy...' : detectedAddress}</Text>
+                <TouchableOpacity onPress={() => router.push('/user/address' as any)}>
+                  <Text style={{ color: AppColors.primary, marginTop: 6 }}>Cập nhật địa chỉ</Text>
+                </TouchableOpacity>
+              </View>
+            ) : null;
+          })()}
           <View style={[styles.membershipBadge, { backgroundColor: membershipColors[userInfo.membership] }]}>
             <Text style={styles.membershipText}>
               {userInfo.membership.charAt(0).toUpperCase() + userInfo.membership.slice(1)} • {userInfo.points} pts
@@ -292,7 +306,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#FF6B9D',
+    backgroundColor: AppColors.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -431,7 +445,7 @@ const styles = StyleSheet.create({
   logoutButton: {
     marginHorizontal: 16,
     marginBottom: 16,
-    backgroundColor: '#FF6B9D',
+    backgroundColor: AppColors.primary,
     borderRadius: 12,
     paddingVertical: 12,
     alignItems: 'center',

@@ -1,7 +1,7 @@
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Fonts } from '@/constants/theme';
-import { useAuth } from '@/contexts/AuthContext';
+import { AppColors, Fonts } from '@/constants/theme';
+import { useAuth } from '@/contexts/Auth';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { Eye, EyeOff, Heart, Lock, Mail } from 'lucide-react-native';
@@ -47,14 +47,14 @@ export default function LoginScreen() {
     >
       <ScrollView style={{ flex: 1 }} bounces={false}>
         <LinearGradient
-          colors={['#ff6699', '#ffb3d9']}
+          colors={[AppColors.primary, AppColors.primaryLight]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.header}
         >
           <Heart size={60} color="#fff" fill="#fff" />
           <ThemedText type="title" style={styles.headerTitle}>
-            BeautyShop
+            Fiora Luxe
           </ThemedText>
           <ThemedText style={styles.headerSubtitle}>
             Mỹ phẩm chính hãng, giá tốt
@@ -65,13 +65,13 @@ export default function LoginScreen() {
           {/* Email Input */}
           <View style={styles.inputWrapper}>
             <View style={styles.inputLabel}>
-              <Mail size={18} color="#ff6699" />
+              <Mail size={18} color={AppColors.primaryDark} />
               <ThemedText style={styles.labelText}>Email</ThemedText>
             </View>
             <TextInput
-              style={styles.input}
+                style={styles.input}
               placeholder="Nhập email của bạn"
-              placeholderTextColor="#999"
+              placeholderTextColor={AppColors.textMuted}
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
@@ -82,7 +82,7 @@ export default function LoginScreen() {
           {/* Password Input */}
           <View style={styles.inputWrapper}>
             <View style={styles.inputLabel}>
-              <Lock size={18} color="#ff6699" />
+              <Lock size={18} color={AppColors.primaryDark} />
               <ThemedText style={styles.labelText}>Mật khẩu</ThemedText>
             </View>
             <View style={styles.passwordContainer}>
@@ -100,16 +100,16 @@ export default function LoginScreen() {
                 disabled={isLoading}
               >
                 {showPassword ? (
-                  <Eye size={20} color="#ff6699" />
+                  <Eye size={20} color={AppColors.primaryDark} />
                 ) : (
-                  <EyeOff size={20} color="#ccc" />
+                  <EyeOff size={20} color={AppColors.textMuted} />
                 )}
               </TouchableOpacity>
             </View>
           </View>
 
           {/* Forgot Password */}
-          <TouchableOpacity style={styles.forgotContainer}>
+          <TouchableOpacity style={styles.forgotContainer} onPress={() => router.push('/auth/forgot')}>
             <ThemedText style={styles.forgotText}>Quên mật khẩu?</ThemedText>
           </TouchableOpacity>
 
@@ -134,10 +134,10 @@ export default function LoginScreen() {
           {/* Social Login */}
           <View style={styles.socialContainer}>
             <TouchableOpacity style={styles.socialBtn}>
-              <ThemedText style={styles.socialText}>Google</ThemedText>
+              <ThemedText style={[styles.socialText, { color: AppColors.textPrimary }]}>Google</ThemedText>
             </TouchableOpacity>
             <TouchableOpacity style={styles.socialBtn}>
-              <ThemedText style={styles.socialText}>Facebook</ThemedText>
+              <ThemedText style={[styles.socialText, { color: AppColors.textPrimary }]}>Facebook</ThemedText>
             </TouchableOpacity>
           </View>
 
@@ -145,7 +145,7 @@ export default function LoginScreen() {
           <View style={styles.signUpContainer}>
             <ThemedText style={styles.signUpText}>Chưa có tài khoản? </ThemedText>
             <TouchableOpacity onPress={() => router.push('/auth/signup')}>
-              <ThemedText style={styles.signUpLink}>Đăng ký ngay</ThemedText>
+              <ThemedText style={[styles.signUpLink, { color: AppColors.primaryDark }]}>Đăng ký ngay</ThemedText>
             </TouchableOpacity>
           </View>
         </ThemedView>
@@ -167,7 +167,7 @@ const styles = StyleSheet.create({
     fontSize: 32,
   },
   headerSubtitle: {
-    color: 'rgba(255,255,255,0.8)',
+    color: 'rgba(255,255,255,0.9)',
     fontSize: 14,
   },
   container: {
@@ -190,21 +190,21 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 2,
-    borderColor: '#FFE8ED',
+    borderColor: AppColors.primaryLight,
     borderRadius: 12,
     paddingVertical: 12,
     paddingHorizontal: 16,
     fontSize: 14,
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
   },
   passwordContainer: {
     flexDirection: 'row' as const,
     alignItems: 'center' as const,
     borderWidth: 2,
-    borderColor: '#FFE8ED',
+    borderColor: AppColors.primaryLight,
     borderRadius: 12,
     paddingHorizontal: 16,
-    backgroundColor: '#fff',
+    backgroundColor: AppColors.surface,
   },
   passwordInput: {
     flex: 1,
@@ -217,17 +217,17 @@ const styles = StyleSheet.create({
   },
   forgotText: {
     fontSize: 13,
-    color: '#ff6699',
+    color: AppColors.primaryDark,
     fontWeight: '600' as const,
   },
   loginBtn: {
-    backgroundColor: '#ff6699',
+    backgroundColor: AppColors.primaryDark,
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center' as const,
     marginBottom: 20,
-    shadowColor: '#ff6699',
-    shadowOpacity: 0.3,
+    shadowColor: AppColors.primaryDark,
+    shadowOpacity: 0.25,
     shadowRadius: 10,
     elevation: 5,
   },
@@ -235,7 +235,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   loginBtnText: {
-    color: '#fff',
+    color: AppColors.onPrimary,
     fontSize: 16,
     fontWeight: '700' as const,
   },
@@ -248,11 +248,11 @@ const styles = StyleSheet.create({
   divider: {
     flex: 1,
     height: 1,
-    backgroundColor: '#ddd',
+    backgroundColor: AppColors.divider,
   },
   dividerText: {
     fontSize: 12,
-    opacity: 0.5,
+    color: AppColors.textMuted,
   },
   socialContainer: {
     flexDirection: 'row' as const,
@@ -263,7 +263,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 12,
     borderWidth: 2,
-    borderColor: '#FFE8ED',
+    borderColor: AppColors.primaryLight,
     borderRadius: 12,
     alignItems: 'center' as const,
   },
@@ -278,11 +278,11 @@ const styles = StyleSheet.create({
   },
   signUpText: {
     fontSize: 13,
-    opacity: 0.6,
+    color: AppColors.textMuted,
   },
   signUpLink: {
     fontSize: 13,
-    color: '#ff6699',
+    color: AppColors.primaryDark,
     fontWeight: '700' as const,
   },
 });

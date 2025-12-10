@@ -1,25 +1,26 @@
+import { AppColors } from '@/constants/theme';
 import { useOrders } from '@/contexts/OrdersContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import {
-    ChevronLeft,
-    Repeat,
-    Search,
-    ShoppingCart,
-    Slash,
-    Star,
-    Truck
+  ChevronLeft,
+  Repeat,
+  Search,
+  ShoppingCart,
+  Slash,
+  Star,
+  Truck
 } from 'lucide-react-native';
 import React, { useMemo, useState } from 'react';
 import {
-    Alert,
-    FlatList,
-    Image,
-    Pressable,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  FlatList,
+  Image,
+  Pressable,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 type OrderStatus = 'all' | 'pending' | 'picking' | 'shipping' | 'delivered' | 'cancelled';
@@ -188,7 +189,7 @@ export default function OrderHistoryScreen() {
         {uiStatus === 'shipping' && (
           <>
             <TouchableOpacity style={styles.actionBtn} onPress={() => handleAction(item, 'track')}>
-              <Truck size={16} color="#FF6B9D" />
+              <Truck size={16} color={AppColors.primary} />
               <Text style={styles.actionText}>Theo dõi</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.actionBtn} onPress={() => handleAction(item, 'contact')}>
@@ -204,7 +205,7 @@ export default function OrderHistoryScreen() {
               <Text style={styles.primaryBtnText}>Mua lại</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.actionBtn} onPress={() => handleAction(item, 'review')}>
-              <Star size={16} color="#FF6B9D" />
+              <Star size={16} color={AppColors.primary} />
               <Text style={styles.actionText}>Viết đánh giá</Text>
             </TouchableOpacity>
           </>
@@ -235,7 +236,7 @@ export default function OrderHistoryScreen() {
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={["#ff6b9d", "#c44569"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.header}>
+      <LinearGradient colors={[AppColors.primary, AppColors.primaryLight]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.header}>
         <View style={styles.headerContent}>
           <TouchableOpacity onPress={() => router.back()}>
             <ChevronLeft size={22} color="white" />
@@ -297,7 +298,7 @@ const styles = StyleSheet.create({
   tabItem: { paddingVertical: 8, paddingHorizontal: 12, borderRadius: 20, marginRight: 8 },
   tabItemActive: { backgroundColor: '#FFEEF3' },
   tabText: { fontSize: 13, color: '#666' },
-  tabTextActive: { color: '#FF6B9D', fontWeight: '700' },
+  tabTextActive: { color: AppColors.primary, fontWeight: '700' },
   listContent: { padding: 12, paddingBottom: 40 },
   orderCard: { backgroundColor: 'white', borderRadius: 12, padding: 12, marginBottom: 12, shadowColor: '#000', shadowOpacity: 0.04, shadowOffset: { width: 0, height: 1 }, shadowRadius: 6, elevation: 2 },
   orderHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 },
@@ -319,17 +320,17 @@ const styles = StyleSheet.create({
   priceValue: { fontSize: 12, color: '#222' },
   priceRowAccent: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8, alignItems: 'center' },
   priceTotalLabel: { fontSize: 14, color: '#222', fontWeight: '700' },
-  priceTotalValue: { fontSize: 16, color: '#FF6B9D', fontWeight: '800' },
+  priceTotalValue: { fontSize: 16, color: AppColors.primary, fontWeight: '800' },
   actionsRow: { flexDirection: 'row', marginTop: 12, gap: 8, flexWrap: 'wrap' },
   actionBtn: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, borderWidth: 1, borderColor: '#eee', backgroundColor: 'white' },
   actionText: { marginLeft: 8, color: '#333' },
-  primaryBtn: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, backgroundColor: '#FF6B9D' },
+  primaryBtn: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, backgroundColor: AppColors.primary },
   primaryBtnText: { color: 'white', marginLeft: 8, fontWeight: '700' },
   cancelBtn: { paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8, backgroundColor: 'transparent', borderWidth: 1, borderColor: '#F2C2C2' },
   cancelBtnText: { color: '#C62828', fontWeight: '700' },
   emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
   emptyIcon: { fontSize: 48 },
   emptyTitle: { fontSize: 16, color: '#444', marginTop: 12, marginBottom: 12 },
-  shopNowBtn: { backgroundColor: '#FF6B9D', paddingHorizontal: 18, paddingVertical: 10, borderRadius: 8 },
+  shopNowBtn: { backgroundColor: AppColors.primary, paddingHorizontal: 18, paddingVertical: 10, borderRadius: 8 },
   shopNowText: { color: 'white', fontWeight: '700' },
 });
