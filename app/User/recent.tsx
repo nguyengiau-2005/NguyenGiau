@@ -20,7 +20,7 @@ export default function RecentScreen() {
   const renderItem = ({ item }: { item: any }) => (
     <View style={styles.card}>
       {item.img ? (
-        <Image source={typeof item.img === 'string' ? { uri: item.img } : item.img} style={styles.image} />
+        <Image source={typeof item.img === 'string' ? (item.img.url ? { uri: item.img.url } : { uri: item.img }) : (item.img.url ? { uri: item.img.url } : item.img)} style={styles.image} />
       ) : (
         <View style={styles.fallback}><Text>📦</Text></View>
       )}

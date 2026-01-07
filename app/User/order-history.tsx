@@ -96,11 +96,11 @@ export default function OrderHistoryScreen() {
     const more = items.length - preview.length;
     return (
       <View style={styles.previewContainer}>
-        {preview.map((p) => (
+            {preview.map((p) => (
           <View key={String(p.id)} style={styles.previewItem}>
             {p.img ? (
               <Image
-                source={typeof p.img === 'string' ? { uri: p.img } : p.img}
+                source={typeof p.img === 'string' ? { uri: p.img } : ('url' in p.img ? { uri: p.img.url } : p.img)}
                 style={styles.previewImage}
               />
             ) : (

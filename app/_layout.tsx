@@ -1,7 +1,6 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
 import 'react-native-reanimated';
 
 import { AuthProvider, useAuth } from '@/contexts/Auth';
@@ -19,15 +18,7 @@ function RootLayoutNav() {
   const { isLoggedIn } = useAuth();
   const router = useRouter();
 
-  // Force the initial route to welcome so it shows first.
-  useEffect(() => {
-    try {
-      router.replace('/welcome' as any);
-    } catch (e) {
-      // ignore if router not ready
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // No automatic welcome redirect — show auth or tabs based on login
 
   return (
     <Stack>

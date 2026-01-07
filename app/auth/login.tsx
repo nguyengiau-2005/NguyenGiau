@@ -29,7 +29,7 @@ export default function LoginScreen() {
         {
           text: 'OK',
           onPress: () => {
-            router.replace('/');
+            router.replace('/(tabs)');
           },
         },
       ]);

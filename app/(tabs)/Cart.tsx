@@ -12,32 +12,32 @@ const SHIPPING_FEE = 15000;
 const DISCOUNT_VOUCHER = 50000;
 
 export default function CartScreen() {
-  const { cart, removeFromCart, updateQty, setSelectedCheckoutItems } = useCart();
+  const { cart, removeFromCart, updateQty, updateVolume, setSelectedCheckoutItems } = useCart();
   const { addFavorite } = useFavorites();
   const router = useRouter();
   const [selectedVoucher, setSelectedVoucher] = useState<string | null>(null);
   const [selectAll, setSelectAll] = useState(false);
-  const [selectedItems, setSelectedItems] = useState<number[]>([]);
+  const [selectedItems, setSelectedItems] = useState<string[]>([]);
 
-  const increase = (id: number) => {
-    const item = cart.find(item => item.id === id);
+  const increase = (id: number, volume?: string) => {
+    const item = cart.find(item => item.id === id && (item.volume ?? '50ml') === (volume ?? '50ml'));
     if (item) {
-      updateQty(id, item.qty + 1);
+      updateQty(id, item.qty + 1, item.volume);
     }
   };
 
-  const decrease = (id: number) => {
-    const item = cart.find(item => item.id === id);
+  const decrease = (id: number, volume?: string) => {
+    const item = cart.find(item => item.id === id && (item.volume ?? '50ml') === (volume ?? '50ml'));
     if (item && item.qty > 1) {
-      updateQty(id, item.qty - 1);
+      updateQty(id, item.qty - 1, item.volume);
     }
   };
 
-  const toggleSelectItem = (id: number) => {
-    if (selectedItems.includes(id)) {
-      setSelectedItems(selectedItems.filter(itemId => itemId !== id));
+  const toggleSelectItem = (key: string) => {
+    if (selectedItems.includes(key)) {
+      setSelectedItems(selectedItems.filter(itemKey => itemKey !== key));
     } else {
-      setSelectedItems([...selectedItems, id]);
+      setSelectedItems([...selectedItems, key]);
     }
   };
 
@@ -46,12 +46,12 @@ export default function CartScreen() {
       setSelectedItems([]);
       setSelectAll(false);
     } else {
-      setSelectedItems(cart.map(item => item.id));
+      setSelectedItems(cart.map(item => `${item.id}-${item.volume ?? '50ml'}`));
       setSelectAll(true);
     }
   };
 
-  const selectedCartItems = cart.filter(item => selectedItems.includes(item.id));
+  const selectedCartItems = cart.filter(item => selectedItems.includes(`${item.id}-${item.volume ?? '50ml'}`));
   const totalPrice = selectedCartItems.reduce((sum, item) => sum + item.price * item.qty, 0);
   const discount = selectedVoucher ? DISCOUNT_VOUCHER : 0;
   const shippingFee = totalPrice > 500000 ? 0 : SHIPPING_FEE;
@@ -125,18 +125,18 @@ export default function CartScreen() {
                 {/* Checkbox */}
                   <TouchableOpacity 
                   style={{ width: 26, height: 26, borderRadius: 6, borderWidth: 2, borderColor: AppColors.primary, justifyContent: 'center', alignItems: 'center' }}
-                  onPress={(e) => { e.stopPropagation?.(); toggleSelectItem(item.id); }}
+                  onPress={(e) => { e.stopPropagation?.(); toggleSelectItem(`${item.id}-${item.volume ?? '50ml'}`); }}
                 >
-                  {selectedItems.includes(item.id) && (
+                  {selectedItems.includes(`${item.id}-${item.volume ?? '50ml'}`) && (
                     <View style={{ width: 16, height: 16, borderRadius: 4, backgroundColor: AppColors.primary }} />
                   )}
                 </TouchableOpacity>
 
                 {/* Product Image */}
-                <Image source={typeof item.img === 'string' ? { uri: item.img } : item.img} style={{ width: 84, height: 84, borderRadius: 12, backgroundColor: '#fafafa' }} />
+                <Image source={typeof item.img === 'string' ? { uri: item.img } : ('url' in item.img ? { uri: item.img.url } : item.img)} style={{ width: 84, height: 84, borderRadius: 12, backgroundColor: '#fafafa' }} />
 
                 {/* Product Info */}
-                <View style={{ flex: 1, justifyContent: 'space-between' }}>
+                  <View style={{ flex: 1, justifyContent: 'space-between' }}>
                   <View>
                     <Text style={{ fontSize: 14, fontWeight: '800', color: AppColors.textPrimary }} numberOfLines={2}>{item.name}</Text>
                     <Text style={{ marginTop: 6, fontSize: 13, fontWeight: '700', color: AppColors.primary }}>{item.price.toLocaleString('vi-VN')}đ</Text>
@@ -146,22 +146,33 @@ export default function CartScreen() {
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                       <TouchableOpacity 
                         style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: AppColors.surface, borderWidth: 1, borderColor: '#eee', justifyContent: 'center', alignItems: 'center' }}
-                        onPress={(e) => { e.stopPropagation?.(); decrease(item.id); }}
+                        onPress={(e) => { e.stopPropagation?.(); decrease(item.id, item.volume); }}
                       >
                         <Minus size={14} color={AppColors.primary} strokeWidth={2} />
                       </TouchableOpacity>
                       <Text style={{ width: 28, textAlign: 'center', fontSize: 13, fontWeight: '600' }}>{item.qty}</Text>
                       <TouchableOpacity 
                         style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: AppColors.surface, borderWidth: 1, borderColor: '#eee', justifyContent: 'center', alignItems: 'center' }}
-                        onPress={(e) => { e.stopPropagation?.(); increase(item.id); }}
+                        onPress={(e) => { e.stopPropagation?.(); increase(item.id, item.volume); }}
                       >
                         <Plus size={14} color={AppColors.primary} strokeWidth={2} />
                       </TouchableOpacity>
                     </View>
 
-                    <TouchableOpacity onPress={(e) => { e.stopPropagation?.(); removeFromCart(item.id); }} style={{ padding: 6 }}>
-                      <Trash2 size={18} color={AppColors.primary} />
-                    </TouchableOpacity>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      {/* Volume selector */}
+                      <View style={{ flexDirection: 'row', backgroundColor: '#fff', borderRadius: 8, padding: 6, borderWidth: 1, borderColor: '#eee' }}>
+                        {['50ml', '100ml', '250ml'].map((v) => (
+                          <TouchableOpacity key={v} onPress={(e) => { e.stopPropagation?.(); updateVolume(item.id, v, item.volume); }} style={{ paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, backgroundColor: (item.volume ?? '50ml') === v ? AppColors.primary : 'transparent' }}>
+                            <Text style={{ fontSize: 11, fontWeight: '700', color: (item.volume ?? '50ml') === v ? '#fff' : AppColors.textPrimary }}>{v}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+
+                      <TouchableOpacity onPress={(e) => { e.stopPropagation?.(); removeFromCart(item.id, item.volume); }} style={{ padding: 6 }}>
+                        <Trash2 size={18} color={AppColors.primary} />
+                      </TouchableOpacity>
+                    </View>
                   </View>
                 </View>
               </View>
