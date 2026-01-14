@@ -53,31 +53,31 @@ export const Fonts = Platform.select({
 });
 
 export const AppColors = {
-  // Pink‑purple pastel theme (hồng ánh tím)
+  // Sea‑blue cosmetic theme
   // Core palette
-  primary: '#E69FF6',        // pastel pink-purple (main)
-  primaryLight: '#F9E8FB',   // very light/airy pink tint
-  primaryDark: '#9B3FBF',    // darker purple for CTAs
-  primaryGradient: ['#E69FF6', '#D08BF8'] as const,
-  brandGradient: ['#E69FF6', '#B573FF'] as const,
+  primary: '#0EA5C9',        // sea blue (main)
+  primaryLight: '#E6FBFD',   // very light sea tint
+  primaryDark: '#057A90',    // darker sea for CTAs
+  primaryGradient: ['#0EA5C9', '#2DD4BF'] as const,
+  brandGradient: ['#0EA5C9', '#06B6D4'] as const,
 
   // Contrast / surface tokens
-  background: '#FFF7FB',     // app background (soft pinkish white)
+  background: '#F3FBFD',     // app background (soft sea white)
   surface: '#FFFFFF',        // cards and surfaces
-  surfaceElevated: '#FFF9FE',
+  surfaceElevated: '#FBFEFF',
 
   // Text colors
-  textPrimary: '#231428',    // deep muted purple for high contrast
-  textSecondary: '#5F4660',
-  textMuted: '#9F84A8',
+  textPrimary: '#04323A',    // deep teal for high contrast
+  textSecondary: '#3D6B73',
+  textMuted: '#7AA1A6',
 
   // On-colors (what color to use on top of primary / surface)
   onPrimary: '#FFFFFF',
-  onSurface: '#231428',
+  onSurface: '#04323A',
 
   // Utility
-  disabled: '#CBBED0',
-  divider: '#F3E8F7',
+  disabled: '#BFD7D9',
+  divider: '#E6F7F8',
 };
 
 export default { Colors, Fonts, AppColors };

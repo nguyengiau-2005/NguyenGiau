@@ -2,6 +2,7 @@ import { AppColors } from '@/constants/theme';
 import { useCart } from '@/contexts/CartContext';
 import { useFavorites } from '@/contexts/FavoritesContext';
 import useDeviceLocation from '@/hooks/useDeviceLocation';
+import { formatCurrency, formatPrice } from '@/utils/formatPrice';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, Gift, Home, Minus, Plus, ShoppingCart, Trash2 } from 'lucide-react-native';
@@ -52,8 +53,8 @@ export default function CartScreen() {
   };
 
   const selectedCartItems = cart.filter(item => selectedItems.includes(`${item.id}-${item.volume ?? '50ml'}`));
-  const totalPrice = selectedCartItems.reduce((sum, item) => sum + item.price * item.qty, 0);
-  const discount = selectedVoucher ? DISCOUNT_VOUCHER : 0;
+  const totalPrice = selectedCartItems.reduce((sum, item) => sum + (item.price * 1000) * item.qty, 0);
+  const discount = selectedVoucher ? (DISCOUNT_VOUCHER) : 0;
   const shippingFee = totalPrice > 500000 ? 0 : SHIPPING_FEE;
   const totalPayment = totalPrice - discount + shippingFee;
   const itemCount = cart.reduce((count, item) => count + item.qty, 0);
@@ -139,7 +140,7 @@ export default function CartScreen() {
                   <View style={{ flex: 1, justifyContent: 'space-between' }}>
                   <View>
                     <Text style={{ fontSize: 14, fontWeight: '800', color: AppColors.textPrimary }} numberOfLines={2}>{item.name}</Text>
-                    <Text style={{ marginTop: 6, fontSize: 13, fontWeight: '700', color: AppColors.primary }}>{item.price.toLocaleString('vi-VN')}đ</Text>
+                    <Text style={{ marginTop: 6, fontSize: 13, fontWeight: '700', color: AppColors.primary }}>{formatPrice(item.price)}đ</Text>
                   </View>
 
                   <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -218,26 +219,26 @@ export default function CartScreen() {
           <View style={{ backgroundColor: AppColors.surface, padding: 16, borderRadius: 12, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
               <Text style={{ fontSize: 13, color: AppColors.textSecondary }}>Tổng tiền hàng</Text>
-              <Text style={{ fontSize: 13, fontWeight: '600', color: AppColors.textPrimary }}>{totalPrice.toLocaleString('vi-VN')}đ</Text>
+              <Text style={{ fontSize: 13, fontWeight: '600', color: AppColors.textPrimary }}>{formatCurrency(totalPrice)}đ</Text>
             </View>
             {discount > 0 && (
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
                 <Text style={{ fontSize: 13, color: '#666' }}>Giảm giá</Text>
-                <Text style={{ fontSize: 13, fontWeight: '600', color: '#27ae60' }}>-{discount.toLocaleString('vi-VN')}đ</Text>
+                <Text style={{ fontSize: 13, fontWeight: '600', color: '#27ae60' }}>-{formatCurrency(discount)}đ</Text>
               </View>
             )}
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: '#eee' }}>
                 <Text style={{ fontSize: 13, color: AppColors.textSecondary }}>Phí vận chuyển</Text>
               <Text style={{ fontSize: 13, fontWeight: '600', color: shippingFee === 0 ? '#27ae60' : AppColors.textPrimary }}>
-                {shippingFee === 0 ? 'Miễn phí' : shippingFee.toLocaleString('vi-VN') + 'đ'}
+                {shippingFee === 0 ? 'Miễn phí' : formatCurrency(shippingFee) + 'đ'}
               </Text>
             </View>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingTop: 12 }}>
               <Text style={{ fontSize: 15, fontWeight: '700', color: AppColors.textPrimary }}>Tổng thanh toán</Text>
-              <Text style={{ fontSize: 18, fontWeight: '800', color: AppColors.primary }}>{totalPayment.toLocaleString('vi-VN')}đ</Text>
+              <Text style={{ fontSize: 18, fontWeight: '800', color: AppColors.primary }}>{formatCurrency(totalPayment)}đ</Text>
             </View>
             {discount > 0 && (
-              <Text style={{ fontSize: 11, color: '#27ae60', marginTop: 10 }}>🎉 Bạn tiết kiệm được {discount.toLocaleString('vi-VN')}đ</Text>
+              <Text style={{ fontSize: 11, color: '#27ae60', marginTop: 10 }}>🎉 Bạn tiết kiệm được {formatCurrency(discount)}đ</Text>
             )}
           </View>
         </View>
@@ -257,7 +258,7 @@ export default function CartScreen() {
             </View>
             <Text style={{ fontSize: 13, fontWeight: '600', color: AppColors.textPrimary }}>Chọn tất cả</Text>
           </TouchableOpacity>
-          <Text style={{ fontSize: 15, fontWeight: '700', color: AppColors.primary }}>{selectedItems.length > 0 ? totalPayment.toLocaleString('vi-VN') : '0'}đ</Text>
+          <Text style={{ fontSize: 15, fontWeight: '700', color: AppColors.primary }}>{selectedItems.length > 0 ? formatCurrency(totalPayment) : '0'}đ</Text>
         </View>
 
         <TouchableOpacity 
@@ -272,7 +273,7 @@ export default function CartScreen() {
               Alert.alert('Thông báo', 'Vui lòng chọn ít nhất 1 sản phẩm');
               return;
             }
-            Alert.alert('Thanh toán', `Thanh toán ${totalPayment.toLocaleString('vi-VN')}đ?`, [
+            Alert.alert('Thanh toán', `Thanh toán ${formatCurrency(totalPayment)}đ?`, [
               { text: 'Hủy' },
               { 
                 text: 'Xác nhận', 

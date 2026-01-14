@@ -1,4 +1,4 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronLeft, Heart, ShoppingBag, Star } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Image, Text, TouchableOpacity, View } from 'react-native';
@@ -8,12 +8,13 @@ import apiProduct, { ProductData } from '@/api/apiProduct';
 import { AppColors } from '@/constants/theme';
 import { useCart } from '@/contexts/CartContext';
 import { useFavorites } from '@/contexts/FavoritesContext';
+import { formatPriceFromAPI } from '@/utils/formatPrice';
 import toImageSource from '@/utils/toImageSource';
 
 export default function CategoryProductsScreen() {
   const { id, name } = useLocalSearchParams();
   const router = useRouter();
-  
+
   // Hooks cho giỏ hàng và yêu thích
   const { addToCart } = useCart();
   const { addFavorite, removeFavorite, isFavorite } = useFavorites();
@@ -26,13 +27,13 @@ export default function CategoryProductsScreen() {
       try {
         setLoading(true);
         const res = await apiProduct.getAllProducts();
-        
+
         // Lọc sản phẩm theo danh mục dựa trên ID truyền sang
-        const filtered = res.results.filter(product => 
-          Array.isArray(product.Categories) && 
+        const filtered = res.results.filter(product =>
+          Array.isArray(product.Categories) &&
           product.Categories.some((c: any) => Number(c.id) === Number(id))
         );
-        
+
         setProducts(filtered);
       } catch (error) {
         console.error("Lỗi lọc sản phẩm:", error);
@@ -96,17 +97,17 @@ export default function CategoryProductsScreen() {
           style={{ width: '100%', height: '100%' }}
         />
         <TouchableOpacity
-          style={{ 
-            position: 'absolute', top: 8, left: 8, 
-            backgroundColor: '#ffffff90', width: 28, height: 28, 
-            borderRadius: 14, justifyContent: 'center', alignItems: 'center' 
+          style={{
+            position: 'absolute', top: 8, left: 8,
+            backgroundColor: '#ffffff90', width: 28, height: 28,
+            borderRadius: 14, justifyContent: 'center', alignItems: 'center'
           }}
           onPress={() => handleToggleFavorite(item)}
         >
-          <Heart 
-            color="#C9A6FF" size={16} 
-            fill={isFavorite(item.id) ? '#C9A6FF' : 'transparent'} 
-            strokeWidth={2} 
+          <Heart
+            color="#C9A6FF" size={16}
+            fill={isFavorite(item.id) ? '#C9A6FF' : 'transparent'}
+            strokeWidth={2}
           />
         </TouchableOpacity>
       </View>
@@ -116,20 +117,20 @@ export default function CategoryProductsScreen() {
         <Text style={{ fontWeight: '700', fontSize: 12, color: '#333' }} numberOfLines={2}>
           {item.Name}
         </Text>
-        
+
         <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
           <Star size={12} color="#ffb300" fill="#ffb300" />
           <Text style={{ marginLeft: 3, fontSize: 11, fontWeight: '600', color: '#666' }}>5.0</Text>
         </View>
 
         <Text style={{ marginTop: 8, fontWeight: '800', fontSize: 13, color: AppColors.primary }}>
-          {Number(item.Price).toLocaleString()}đ
+          {formatPriceFromAPI(item.Price)}
         </Text>
 
         <TouchableOpacity
-          style={{ 
-            marginTop: 8, backgroundColor: AppColors.primaryDark, 
-            paddingVertical: 6, borderRadius: 8, alignItems: 'center' 
+          style={{
+            marginTop: 8, backgroundColor: AppColors.primaryDark,
+            paddingVertical: 6, borderRadius: 8, alignItems: 'center'
           }}
           onPress={() => handleAddToCart(item)}
         >
@@ -141,9 +142,11 @@ export default function CategoryProductsScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: '#faf9f8' }}>
+      <Stack.Screen options={{ headerShown: false }} />
+
       {/* Custom Header */}
-      <View style={{ 
-        flexDirection: 'row', alignItems: 'center', 
+      <View style={{
+        flexDirection: 'row', alignItems: 'center',
         paddingTop: 55, paddingHorizontal: 16, paddingBottom: 15,
         backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#f0f0f0'
       }}>

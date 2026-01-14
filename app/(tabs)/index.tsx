@@ -11,18 +11,14 @@ import { ActivityIndicator, Alert, Image, ScrollView, Text, TextInput, Touchable
 // Import API Services
 import apiCategory, { CategoryData } from '@/api/apiCategory';
 import apiProduct, { ProductData } from '@/api/apiProduct';
+import apiVoucher, { Voucher } from '@/api/apiVouchers';
+import { formatPriceFromAPI } from '@/utils/formatPrice';
 import toImageSource from '@/utils/toImageSource';
 
 const banners: { id: number; image: any }[] = [
-  { id: 1, image: require('../../assets/images/banner/banner_mega.jpg') },
-  { id: 2, image: require('../../assets/images/banner/banner_sale20.jpg') },
-  { id: 3, image: require('../../assets/images/banner/banner_shopnow.jpg') }
-];
-
-const vouchers = [
-  { id: 1, code: 'SAVE50K', discount: '50.000đ', minSpend: 'Mua từ 500k', expiry: 'Hết 31/12', image: require('../../assets/images/vouchers/vouchers_50.png') },
-  { id: 2, code: 'WELCOME20', discount: '20%', minSpend: 'Mua từ 300k', expiry: 'Hết 15/12', image: require('../../assets/images/vouchers/vouchers_40.png') },
-  { id: 3, code: 'FREESHIP', discount: 'Miễn ship', minSpend: 'Mua từ 200k', expiry: 'Hết 20/12', image: require('../../assets/images/vouchers/vouchers_30.png') }
+  { id: 1, image: require('../../assets/images/banner/banner1.jpg') },
+  { id: 2, image: require('../../assets/images/banner/banner2.jpg') },
+  { id: 3, image: require('../../assets/images/banner/banner4.jpg') }
 ];
 
 const searchSuggestions = ['Serum Vitamin C', 'Kem dưỡng ẩm', 'Sữa rửa mặt', 'Mặt nạ', 'Nước hoa'];
@@ -37,6 +33,7 @@ export default function HomeScreen() {
   // States cho dữ liệu từ API
   const [productsList, setProductsList] = useState<ProductData[]>([]);
   const [categoriesList, setCategoriesList] = useState<CategoryData[]>([]);
+  const [vouchers, setVouchers] = useState<Voucher[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [searchText, setSearchText] = useState('');
@@ -54,14 +51,16 @@ export default function HomeScreen() {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const [prodRes, catRes] = await Promise.all([
+        const [prodRes, catRes, voucherRes] = await Promise.all([
           apiProduct.getAllProducts(),
-          apiCategory.getAllCategories()
+          apiCategory.getAllCategories(),
+          apiVoucher.getVouchers()
         ]);
         setProductsList(prodRes.results);
         setCategoriesList(catRes.results);
+        setVouchers(voucherRes);
       } catch (error) {
-        console.error("Lỗi khi lấy dữ liệu từ Baserow:", error);
+        console.error("Lỗi khi lấy dữ liệu từ API:", error);
       } finally {
         setLoading(false);
       }
@@ -167,7 +166,7 @@ export default function HomeScreen() {
           <Star size={12} color="#ffb300" fill="#ffb300" />
           <Text style={{ marginLeft: 3, fontSize: 11, fontWeight: '600', color: '#666' }}>5.0</Text>
         </View>
-        <Text style={{ marginTop: 8, fontWeight: '800', fontSize: 13, color: AppColors.primary }}>{item.Price}đ</Text>
+        <Text style={{ marginTop: 8, fontWeight: '800', fontSize: 13, color: AppColors.primary }}>{formatPriceFromAPI(item.Price)}</Text>
         <TouchableOpacity
           style={{ marginTop: 8, backgroundColor: AppColors.primaryDark, paddingVertical: 6, borderRadius: 8, alignItems: 'center' }}
           onPress={() => handleAddToCart(item)}
@@ -376,20 +375,32 @@ export default function HomeScreen() {
           <Text style={{ fontSize: 15, fontWeight: '800', color: '#333' }}>Vouchers</Text>
         </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ paddingVertical: 4 }}>
-          {vouchers.map((voucher, idx) => (
-            <TouchableOpacity key={idx} style={{ width: 220, height: 84, marginRight: 12, borderRadius: 12, overflow: 'hidden', backgroundColor: '#fff', shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6, elevation: 2 }}>
-              <Image source={voucher.image} style={{ width: '100%', height: '100%' }} />
-              <View style={{ position: 'absolute', left: 12, top: 10 }}>
-                <Text style={{ fontSize: 12, fontWeight: '800', color: '#fff' }}>{voucher.discount}</Text>
-                <Text style={{ fontSize: 11, color: '#fff', marginTop: 4 }}>{voucher.minSpend}</Text>
-              </View>
-              <View style={{ position: 'absolute', right: 10, bottom: 10 }}>
-                <TouchableOpacity style={{ backgroundColor: AppColors.primary, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 }}>
-                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#fff' }}>{voucher.code}</Text>
-                </TouchableOpacity>
-              </View>
-            </TouchableOpacity>
-          ))}
+          {vouchers.slice(0, 3).map((voucher, idx) => {
+            const imageUrl = voucher.image && voucher.image.length > 0 ? voucher.image[0].url : null;
+            return (
+              <TouchableOpacity key={idx} style={{ width: 220, height: 84, marginRight: 12, borderRadius: 12, overflow: 'hidden', backgroundColor: '#fff', shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6, elevation: 2 }}>
+                {imageUrl ? (
+                  <Image source={{ uri: imageUrl }} style={{ width: '100%', height: '100%' }} />
+                ) : (
+                  <LinearGradient
+                    colors={[AppColors.primary, AppColors.primaryLight]}
+                    style={{ width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center' }}
+                  >
+                    <Gift size={32} color="#fff" />
+                  </LinearGradient>
+                )}
+                <View style={{ position: 'absolute', left: 12, top: 10 }}>
+                  <Text style={{ fontSize: 12, fontWeight: '800', color: '#fff' }}>{voucher.discount}</Text>
+                  <Text style={{ fontSize: 11, color: '#fff', marginTop: 4 }}>{voucher.minSpend}</Text>
+                </View>
+                <View style={{ position: 'absolute', right: 10, bottom: 10 }}>
+                  <TouchableOpacity style={{ backgroundColor: AppColors.primary, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 }}>
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#fff' }}>{voucher.code}</Text>
+                  </TouchableOpacity>
+                </View>
+              </TouchableOpacity>
+            );
+          })}
         </ScrollView>
       </View>
 
@@ -417,7 +428,7 @@ export default function HomeScreen() {
             <View style={{ flex: 1, padding: 12, justifyContent: 'space-between' }}>
               <Text style={{ fontSize: 13, fontWeight: '700', color: '#333' }} numberOfLines={2}>{item.Name}</Text>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Text style={{ fontWeight: '800', fontSize: 13, color: AppColors.primary }}>{item.Price}đ</Text>
+                <Text style={{ fontWeight: '800', fontSize: 13, color: AppColors.primary }}>{formatPriceFromAPI(item.Price)}</Text>
                 <TouchableOpacity style={{ backgroundColor: AppColors.primaryDark, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 }} onPress={() => handleAddToCart(item)}>
                   <Text style={{ fontSize: 10, fontWeight: '600', color: '#fff' }}>Mua</Text>
                 </TouchableOpacity>

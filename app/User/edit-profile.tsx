@@ -2,7 +2,7 @@ import { AppColors } from '@/constants/theme';
 import { useAuth } from '@/contexts/Auth';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { Camera, ChevronLeft } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -97,7 +97,9 @@ export default function EditProfileScreen() {
   };
 
   return (
+
     <ScrollView style={styles.container}>
+      <Stack.Screen options={{ headerShown: false }} />
       {/* Header */}
       <LinearGradient colors={[AppColors.primary, AppColors.primaryLight]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.header}>
         <View style={styles.headerContent}>

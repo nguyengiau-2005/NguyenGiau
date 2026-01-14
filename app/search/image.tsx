@@ -24,7 +24,7 @@ export default function ImageSearchScreen() {
 
   const pickImage = async () => {
     const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.7 });
-    if (!res.canceled) setImage(res);
+    if (!res.canceled && res.assets) setImage(res);
   };
 
   const takePhoto = async () => {
@@ -38,7 +38,7 @@ export default function ImageSearchScreen() {
   };
 
   const submit = async () => {
-    if (!image || image.assets.length === 0) return Alert.alert('No image', 'Choose or take a photo first.');
+    if (!image || !image.assets || image.assets.length === 0) return Alert.alert('No image', 'Choose or take a photo first.');
     const asset = image.assets[0];
     setLoading(true);
     try {
@@ -65,7 +65,7 @@ export default function ImageSearchScreen() {
         </TouchableOpacity>
       </View>
 
-      {image && image.assets.length > 0 && (
+      {image && image.assets && image.assets.length > 0 && (
         <Image source={{ uri: image.assets[0].uri }} style={{ width: '100%', height: 240, borderRadius: 8, marginBottom: 12 }} />
       )}
 

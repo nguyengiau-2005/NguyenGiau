@@ -17,6 +17,7 @@ import apiProduct, { ProductData } from '@/api/apiProduct';
 import { AppColors } from '@/constants/theme';
 import { useCart } from '@/contexts/CartContext';
 import { useFavorites } from '@/contexts/FavoritesContext';
+import { formatPriceFromAPI } from '@/utils/formatPrice';
 import toImageSource from '@/utils/toImageSource';
 
 export default function ProductDetailScreen() {
@@ -123,7 +124,7 @@ export default function ProductDetailScreen() {
 
         {/* 2. Thông tin giá và tên */}
         <View style={styles.contentSection}>
-          <Text style={styles.priceText}>{Number(product.Price).toLocaleString()}đ</Text>
+          <Text style={styles.priceText}>{formatPriceFromAPI(product.Price)}</Text>
           <Text style={styles.productName}>{product.Name}</Text>
           
           <View style={styles.ratingRow}>
@@ -174,7 +175,21 @@ export default function ProductDetailScreen() {
       {/* 6. Thanh điều hướng dưới cùng (Sticky Bottom Bar) */}
       <View style={styles.bottomBar}>
         <View style={styles.bottomActionIcons}>
-          <TouchableOpacity style={styles.bottomIconBtn}>
+          <TouchableOpacity 
+            style={styles.bottomIconBtn}
+            onPress={() => {
+              if (product) {
+                router.push({
+                  pathname: '/support/chat',
+                  params: {
+                    productId: product.id,
+                    productName: product.Name,
+                    productImage: toImageSource(product.Image)?.uri || ''
+                  }
+                } as any);
+              }
+            }}
+          >
             <MessageCircle size={22} color="#666" />
             <Text style={styles.iconSubText}>Chat</Text>
           </TouchableOpacity>

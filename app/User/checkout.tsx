@@ -3,8 +3,9 @@ import { useAuth } from '@/contexts/Auth';
 import { useCart } from '@/contexts/CartContext';
 import { useOrders } from '@/contexts/OrdersContext';
 import useDeviceLocation from '@/hooks/useDeviceLocation';
+import { formatCurrency } from '@/utils/formatPrice';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { ChevronLeft, MapPin, ShoppingBag } from 'lucide-react-native';
 import React, { useState } from 'react';
 import {
@@ -42,7 +43,7 @@ export default function CheckoutScreen() {
   const { selectedCheckoutItems, clearCart } = useCart();
   const auth = useAuth();
   const { addOrder } = useOrders();
-  
+
   // Nếu không có items từ cart, hiển thị empty state
   const cartItems = selectedCheckoutItems.length > 0 ? selectedCheckoutItems : [];
 
@@ -77,7 +78,7 @@ export default function CheckoutScreen() {
     { code: 'SHIP10', discount: 10000, type: 'fixed', description: 'Giảm 10.000đ phí ship' },
   ];
 
-  const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.qty, 0);
+  const subtotal = cartItems.reduce((sum, item) => sum + (item.price * 1000) * item.qty, 0);
   const shippingCost = subtotal > 500000 ? 0 : (shippingMethod === 'standard' ? 15000 : 30000);
   const voucherDiscount = selectedVoucher
     ? selectedVoucher.type === 'fixed'
@@ -97,6 +98,8 @@ export default function CheckoutScreen() {
   if (cartItems.length === 0) {
     return (
       <View style={styles.container}>
+        <Stack.Screen options={{ headerShown: false }} />
+
         <LinearGradient colors={[AppColors.primary, AppColors.primaryLight]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.header}>
           <View style={styles.headerContent}>
             <TouchableOpacity onPress={() => router.back()}>
@@ -251,13 +254,13 @@ export default function CheckoutScreen() {
             {
               id: 'standard',
               name: 'Giao hàng tiêu chuẩn',
-              cost: subtotal > 500000 ? 'MIỄN PHÍ' : '15.000đ',
+              cost: subtotal > 500000 ? 0 : 15000,
               time: '3-5 ngày',
             },
             {
               id: 'express',
               name: 'Giao hàng nhanh',
-              cost: '30.000đ',
+              cost: 30000,
               time: '1-2 ngày',
             },
           ].map((method) => (
@@ -278,7 +281,7 @@ export default function CheckoutScreen() {
                 <Text style={styles.optionName}>{method.name}</Text>
                 <Text style={styles.optionTime}>{method.time}</Text>
               </View>
-              <Text style={styles.optionPrice}>{method.cost}</Text>
+              <Text style={styles.optionPrice}>{method.cost === 0 ? 'Miễn phí' : formatCurrency(method.cost) + 'đ'}</Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -333,7 +336,7 @@ export default function CheckoutScreen() {
                 </Text>
                 <Text style={styles.itemQuantity}>x{item.qty}</Text>
               </View>
-              <Text style={styles.itemPrice}>{(item.price * item.qty).toLocaleString()}đ</Text>
+              <Text style={styles.itemPrice}>{formatCurrency(item.price * item.qty)}đ</Text>
             </View>
           ))}
         </View>
@@ -343,25 +346,25 @@ export default function CheckoutScreen() {
           <View style={styles.summaryBox}>
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Tạm tính:</Text>
-              <Text style={styles.summaryValue}>{subtotal.toLocaleString()}đ</Text>
+              <Text style={styles.summaryValue}>{formatCurrency(subtotal)}đ</Text>
             </View>
             {voucherDiscount > 0 && (
               <View style={styles.summaryRow}>
                 <Text style={styles.summaryLabel}>Giảm giá ({selectedVoucher?.code}):</Text>
                 <Text style={[styles.summaryValue, { color: AppColors.primary }]}>
-                  -{voucherDiscount.toLocaleString()}đ
+                  -{formatCurrency(voucherDiscount)}đ
                 </Text>
               </View>
             )}
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Vận chuyển:</Text>
-              <Text style={styles.summaryValue}>{shippingCost.toLocaleString()}đ</Text>
+              <Text style={styles.summaryValue}>{formatCurrency(shippingCost)}đ</Text>
             </View>
             {shippingVoucherDiscount > 0 && (
               <View style={styles.summaryRow}>
                 <Text style={styles.summaryLabel}>Giảm ship ({selectedShippingVoucher?.code}):</Text>
                 <Text style={[styles.summaryValue, { color: AppColors.primary }]}>
-                  -{shippingVoucherDiscount.toLocaleString()}đ
+                  -{formatCurrency(shippingVoucherDiscount)}đ
                 </Text>
               </View>
             )}
@@ -369,14 +372,14 @@ export default function CheckoutScreen() {
               <View style={styles.summaryRow}>
                 <Text style={styles.summaryLabel}>Dùng điểm:</Text>
                 <Text style={[styles.summaryValue, { color: AppColors.primary }]}>
-                  -{pointsDiscount.toLocaleString()}đ
+                  -{formatCurrency(pointsDiscount)}đ
                 </Text>
               </View>
             )}
             <View style={styles.divider} />
             <View style={styles.summaryRow}>
               <Text style={styles.totalLabel}>Tổng thanh toán:</Text>
-              <Text style={styles.totalPrice}>{total.toLocaleString()}đ</Text>
+              <Text style={styles.totalPrice}>{formatCurrency(total)}đ</Text>
             </View>
           </View>
         </View>
@@ -395,7 +398,7 @@ export default function CheckoutScreen() {
               </Text>
               {selectedVoucher && (
                 <Text style={styles.voucherDiscount}>
-                  Tiết kiệm {voucherDiscount.toLocaleString()}đ
+                  Tiết kiệm {formatCurrency(voucherDiscount)}đ
                 </Text>
               )}
             </View>
@@ -417,7 +420,7 @@ export default function CheckoutScreen() {
               </Text>
               {selectedShippingVoucher && (
                 <Text style={styles.voucherDiscount}>
-                  Tiết kiệm {shippingVoucherDiscount.toLocaleString()}đ
+                  Tiết kiệm {formatCurrency(shippingVoucherDiscount)}đ
                 </Text>
               )}
             </View>
@@ -425,7 +428,7 @@ export default function CheckoutScreen() {
           </TouchableOpacity>
           {shippingVoucherDiscount > 0 && (
             <View style={styles.savingsBadge}>
-              <Text style={styles.savingsText}>✓ Đã tiết kiệm {shippingVoucherDiscount.toLocaleString()}đ</Text>
+              <Text style={styles.savingsText}>✓ Đã tiết kiệm {formatCurrency(shippingVoucherDiscount)}đ</Text>
             </View>
           )}
         </View>
@@ -469,11 +472,11 @@ export default function CheckoutScreen() {
         <View style={styles.finalSummary}>
           <View style={styles.finalSummaryRow}>
             <Text style={styles.finalLabel}>Tổng thanh toán</Text>
-            <Text style={styles.finalPrice}>{total.toLocaleString()}đ</Text>
+            <Text style={styles.finalPrice}>{formatCurrency(total)}đ</Text>
           </View>
           {savedAmount > 0 && (
             <View style={styles.savingsInfo}>
-              <Text style={styles.savingsInfoText}>Bạn đã tiết kiệm {savedAmount.toLocaleString()}đ</Text>
+              <Text style={styles.savingsInfoText}>Bạn đã tiết kiệm {formatCurrency(savedAmount)}đ</Text>
             </View>
           )}
           <Text style={styles.termsText}>Bằng việc đặt hàng bạn đồng ý với điều khoản của cửa hàng</Text>
@@ -486,7 +489,7 @@ export default function CheckoutScreen() {
       <View style={styles.bottomBar}>
         <View>
           <Text style={styles.bottomLabel}>Tổng</Text>
-          <Text style={styles.bottomPrice}>{total.toLocaleString()}đ</Text>
+          <Text style={styles.bottomPrice}>{formatCurrency(total)}đ</Text>
         </View>
         <TouchableOpacity onPress={handlePlaceOrder} disabled={isLoading} activeOpacity={0.9}>
           <LinearGradient colors={[AppColors.primary, AppColors.primaryLight]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ borderRadius: 10 }}>
@@ -530,7 +533,7 @@ export default function CheckoutScreen() {
                   </View>
                   <Text style={styles.voucherItemDiscount}>
                     {item.type === 'fixed'
-                      ? `-${item.discount.toLocaleString()}đ`
+                      ? `-${formatCurrency(item.discount)}đ`
                       : `-${item.discount}%`}
                   </Text>
                 </TouchableOpacity>
@@ -569,7 +572,7 @@ export default function CheckoutScreen() {
                   </View>
                   <Text style={styles.voucherItemDiscount}>
                     {item.type === 'fixed'
-                      ? `-${item.discount.toLocaleString()}đ`
+                      ? `-${formatCurrency(item.discount)}đ`
                       : `Miễn phí`}
                   </Text>
                 </TouchableOpacity>
@@ -606,7 +609,7 @@ export default function CheckoutScreen() {
               )}
               <Text style={{ fontSize: 14, color: '#333', fontWeight: '600', marginBottom: 6 }}>Quét mã QR để chuyển khoản</Text>
               <Text style={{ fontSize: 12, color: '#666', textAlign: 'center', marginBottom: 14 }}>Sử dụng ứng dụng ngân hàng của bạn để quét mã và chuyển tiền vào tài khoản cửa hàng.</Text>
-              <Text style={{ fontSize: 13, color: '#444', fontWeight: '700', marginBottom: 12 }}>Số tiền cần chuyển: {total.toLocaleString()}đ</Text>
+              <Text style={{ fontSize: 13, color: '#444', fontWeight: '700', marginBottom: 12 }}>Số tiền cần chuyển: {formatCurrency(total)}đ</Text>
               <TouchableOpacity onPress={verifyBankPayment} style={[styles.checkoutButton, { minWidth: 180 }]} disabled={isLoading}>
                 {isLoading ? (
                   <ActivityIndicator color="white" />

@@ -1,5 +1,6 @@
 import { AppColors } from '@/constants/theme';
 import { useRecent } from '@/contexts/RecentContext';
+import { formatPrice } from '@/utils/formatPrice';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { ChevronLeft, Trash2 } from 'lucide-react-native';
@@ -27,7 +28,7 @@ export default function RecentScreen() {
       <View style={styles.info}>
         <Text style={styles.name} numberOfLines={2}>{item.name}</Text>
         {item.variant && <Text style={styles.meta}>{item.variant}</Text>}
-        {typeof item.price === 'number' && <Text style={styles.price}>{item.price.toLocaleString()}đ</Text>}
+        {typeof item.price === 'number' && <Text style={styles.price}>{formatPrice(item.price)}đ</Text>}
       </View>
 
       <TouchableOpacity style={styles.delete} onPress={() => removeRecent(item.id)}>

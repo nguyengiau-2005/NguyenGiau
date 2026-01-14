@@ -1,26 +1,27 @@
 import { AppColors } from '@/constants/theme';
 import { useOrders } from '@/contexts/OrdersContext';
+import { formatCurrency } from '@/utils/formatPrice';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import {
-  ChevronLeft,
-  Repeat,
-  Search,
-  ShoppingCart,
-  Slash,
-  Star,
-  Truck
+    ChevronLeft,
+    Repeat,
+    Search,
+    ShoppingCart,
+    Slash,
+    Star,
+    Truck
 } from 'lucide-react-native';
 import React, { useMemo, useState } from 'react';
 import {
-  Alert,
-  FlatList,
-  Image,
-  Pressable,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    Alert,
+    FlatList,
+    Image,
+    Pressable,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 type OrderStatus = 'all' | 'pending' | 'picking' | 'shipping' | 'delivered' | 'cancelled';
@@ -154,7 +155,7 @@ export default function OrderHistoryScreen() {
     const items = item.items || [];
     // Use stored subtotal/shipping from order, or recalculate if not available
     const subTotal = item.subtotal ?? items.reduce((s: number, it: any) => s + (it.price || 0) * (it.qty || 0), 0);
-    const shipping = item.shippingCost ?? Math.max(0, (item.total || 0) - subTotal);
+    const shipping = (item.shippingCost ?? Math.max(0, (item.total || 0) - subTotal)) || 0;
 
     return (
     <View style={styles.orderCard}>
@@ -174,15 +175,15 @@ export default function OrderHistoryScreen() {
 
       <View style={styles.priceRow}>
         <Text style={styles.priceLabel}>Tổng tiền hàng</Text>
-        <Text style={styles.priceValue}>{subTotal.toLocaleString()}đ</Text>
+        <Text style={styles.priceValue}>{formatCurrency(subTotal)}đ</Text>
       </View>
       <View style={styles.priceRow}>
         <Text style={styles.priceLabel}>Phí ship</Text>
-        <Text style={styles.priceValue}>{shipping === 0 ? 'Miễn phí' : shipping.toLocaleString() + 'đ'}</Text>
+        <Text style={styles.priceValue}>{shipping === 0 ? 'Miễn phí' : formatCurrency(shipping) + 'đ'}</Text>
       </View>
       <View style={styles.priceRowAccent}>
         <Text style={styles.priceTotalLabel}>Tổng thanh toán</Text>
-        <Text style={styles.priceTotalValue}>{(item.total || 0).toLocaleString()}đ</Text>
+        <Text style={styles.priceTotalValue}>{formatCurrency(item.total || 0)}đ</Text>
       </View>
 
       <View style={styles.actionsRow}>

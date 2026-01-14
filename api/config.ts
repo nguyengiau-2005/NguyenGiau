@@ -8,6 +8,8 @@ export const CONFIG = {
   ORDER_ITEM_TABLE_ID: '766848',
   INVENTORY_TABLE_ID: '766849',
   USER_TABLE_ID: '793067',
+  VOUCHERS_TABLE_ID: '800594',
+
 
 
   BASEROW_BASE_URL: 'https://api.baserow.io/api/database/rows/table/',

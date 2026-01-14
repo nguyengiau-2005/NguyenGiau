@@ -1,6 +1,7 @@
 import { AppColors } from '@/constants/theme';
 import { useCart } from '@/contexts/CartContext';
 import { useFavorites } from '@/contexts/FavoritesContext';
+import { formatCurrency } from '@/utils/formatPrice';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, Heart, ShoppingCart, Star } from 'lucide-react-native';
@@ -88,7 +89,7 @@ export default function FavoritesScreen() {
         </View>
 
         {/* Price */}
-        <Text style={{ fontWeight: '800', fontSize: 13, color: AppColors.primary, marginBottom: 8 }}>{item.price.toLocaleString('vi-VN')}đ</Text>
+        <Text style={{ fontWeight: '800', fontSize: 13, color: AppColors.primary, marginBottom: 8 }}>{formatCurrency(item.price)}đ</Text>
 
         {/* Add to cart button */}
         <TouchableOpacity 
@@ -120,7 +121,7 @@ export default function FavoritesScreen() {
             </View>
             <Text style={{ fontSize: 11, color: '#999' }}>Có sẵn</Text>
           </View>
-          <Text style={{ fontWeight: '800', fontSize: 14, color: AppColors.primary }}>{item.price.toLocaleString('vi-VN')}đ</Text>
+          <Text style={{ fontWeight: '800', fontSize: 14, color: AppColors.primary }}>{formatCurrency(item.price)}đ</Text>
         </View>
 
         <View style={{ flexDirection: 'row', gap: 8 }}>
