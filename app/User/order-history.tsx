@@ -2,26 +2,26 @@ import { AppColors } from '@/constants/theme';
 import { useOrders } from '@/contexts/OrdersContext';
 import { formatCurrency } from '@/utils/formatPrice';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import {
-    ChevronLeft,
-    Repeat,
-    Search,
-    ShoppingCart,
-    Slash,
-    Star,
-    Truck
+  ChevronLeft,
+  Repeat,
+  Search,
+  ShoppingCart,
+  Slash,
+  Star,
+  Truck
 } from 'lucide-react-native';
 import React, { useMemo, useState } from 'react';
 import {
-    Alert,
-    FlatList,
-    Image,
-    Pressable,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  FlatList,
+  Image,
+  Pressable,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 type OrderStatus = 'all' | 'pending' | 'picking' | 'shipping' | 'delivered' | 'cancelled';
@@ -97,7 +97,8 @@ export default function OrderHistoryScreen() {
     const more = items.length - preview.length;
     return (
       <View style={styles.previewContainer}>
-            {preview.map((p) => (
+        <Stack.Screen options={{ headerShown: false }} />
+        {preview.map((p) => (
           <View key={String(p.id)} style={styles.previewItem}>
             {p.img ? (
               <Image
@@ -158,85 +159,86 @@ export default function OrderHistoryScreen() {
     const shipping = (item.shippingCost ?? Math.max(0, (item.total || 0) - subTotal)) || 0;
 
     return (
-    <View style={styles.orderCard}>
-      <View style={styles.orderHeader}>
-        <View>
-          <Text style={styles.orderNumber}>{item.orderNumber ?? ('#' + item.id)}</Text>
-          <Text style={styles.orderDate}>{item.date}</Text>
+      <View style={styles.orderCard}>
+        <View style={styles.orderHeader}>
+          <View>
+            <Text style={styles.orderNumber}>{item.orderNumber ?? ('#' + item.id)}</Text>
+            <Text style={styles.orderDate}>{item.date}</Text>
+          </View>
+          <View style={[styles.statusBadge, { backgroundColor: statusColors[uiStatus].bg }]}>
+            <Text style={[styles.statusText, { color: statusColors[uiStatus].text }]}>
+              {statusLabels[uiStatus]}
+            </Text>
+          </View>
         </View>
-        <View style={[styles.statusBadge, { backgroundColor: statusColors[uiStatus].bg }]}> 
-          <Text style={[styles.statusText, { color: statusColors[uiStatus].text }]}> 
-            {statusLabels[uiStatus]}
-          </Text>
+
+        {renderProductPreview(items)}
+
+        <View style={styles.priceRow}>
+          <Text style={styles.priceLabel}>Tổng tiền hàng</Text>
+          <Text style={styles.priceValue}>{formatCurrency(subTotal)}đ</Text>
+        </View>
+        <View style={styles.priceRow}>
+          <Text style={styles.priceLabel}>Phí ship</Text>
+          <Text style={styles.priceValue}>{shipping === 0 ? 'Miễn phí' : formatCurrency(shipping) + 'đ'}</Text>
+        </View>
+        <View style={styles.priceRowAccent}>
+          <Text style={styles.priceTotalLabel}>Tổng thanh toán</Text>
+          <Text style={styles.priceTotalValue}>{formatCurrency(item.total || 0)}đ</Text>
+        </View>
+
+        <View style={styles.actionsRow}>
+          {uiStatus === 'shipping' && (
+            <>
+              <TouchableOpacity style={styles.actionBtn} onPress={() => handleAction(item, 'track')}>
+                <Truck size={16} color={AppColors.primary} />
+                <Text style={styles.actionText}>Theo dõi</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.actionBtn} onPress={() => handleAction(item, 'contact')}>
+                <Text style={styles.actionText}>Liên hệ</Text>
+              </TouchableOpacity>
+            </>
+          )}
+
+          {uiStatus === 'delivered' && (
+            <>
+              <TouchableOpacity style={styles.primaryBtn} onPress={() => handleAction(item, 'reorder')}>
+                <Repeat size={16} color="white" />
+                <Text style={styles.primaryBtnText}>Mua lại</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.actionBtn} onPress={() => handleAction(item, 'review')}>
+                <Star size={16} color={AppColors.primary} />
+                <Text style={styles.actionText}>Viết đánh giá</Text>
+              </TouchableOpacity>
+            </>
+          )}
+
+          {uiStatus === 'cancelled' && (
+            <>
+              <TouchableOpacity style={styles.actionBtn} onPress={() => handleAction(item, 'reason')}>
+                <Slash size={16} color="#C62828" />
+                <Text style={styles.actionText}>Lý do hủy</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.primaryBtn} onPress={() => handleAction(item, 'reorder')}>
+                <Repeat size={16} color="white" />
+                <Text style={styles.primaryBtnText}>Mua lại</Text>
+              </TouchableOpacity>
+            </>
+          )}
+
+          {uiStatus === 'pending' && (
+            <TouchableOpacity style={styles.cancelBtn} onPress={() => handleAction(item, 'cancel')}>
+              <Text style={styles.cancelBtnText}>Hủy đơn</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
-
-      {renderProductPreview(items)}
-
-      <View style={styles.priceRow}>
-        <Text style={styles.priceLabel}>Tổng tiền hàng</Text>
-        <Text style={styles.priceValue}>{formatCurrency(subTotal)}đ</Text>
-      </View>
-      <View style={styles.priceRow}>
-        <Text style={styles.priceLabel}>Phí ship</Text>
-        <Text style={styles.priceValue}>{shipping === 0 ? 'Miễn phí' : formatCurrency(shipping) + 'đ'}</Text>
-      </View>
-      <View style={styles.priceRowAccent}>
-        <Text style={styles.priceTotalLabel}>Tổng thanh toán</Text>
-        <Text style={styles.priceTotalValue}>{formatCurrency(item.total || 0)}đ</Text>
-      </View>
-
-      <View style={styles.actionsRow}>
-        {uiStatus === 'shipping' && (
-          <>
-            <TouchableOpacity style={styles.actionBtn} onPress={() => handleAction(item, 'track')}>
-              <Truck size={16} color={AppColors.primary} />
-              <Text style={styles.actionText}>Theo dõi</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.actionBtn} onPress={() => handleAction(item, 'contact')}>
-              <Text style={styles.actionText}>Liên hệ</Text>
-            </TouchableOpacity>
-          </>
-        )}
-
-        {uiStatus === 'delivered' && (
-          <>
-            <TouchableOpacity style={styles.primaryBtn} onPress={() => handleAction(item, 'reorder')}>
-              <Repeat size={16} color="white" />
-              <Text style={styles.primaryBtnText}>Mua lại</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.actionBtn} onPress={() => handleAction(item, 'review')}>
-              <Star size={16} color={AppColors.primary} />
-              <Text style={styles.actionText}>Viết đánh giá</Text>
-            </TouchableOpacity>
-          </>
-        )}
-
-        {uiStatus === 'cancelled' && (
-          <>
-            <TouchableOpacity style={styles.actionBtn} onPress={() => handleAction(item, 'reason')}>
-              <Slash size={16} color="#C62828" />
-              <Text style={styles.actionText}>Lý do hủy</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.primaryBtn} onPress={() => handleAction(item, 'reorder')}>
-              <Repeat size={16} color="white" />
-              <Text style={styles.primaryBtnText}>Mua lại</Text>
-            </TouchableOpacity>
-          </>
-        )}
-
-        {uiStatus === 'pending' && (
-          <TouchableOpacity style={styles.cancelBtn} onPress={() => handleAction(item, 'cancel')}>
-            <Text style={styles.cancelBtnText}>Hủy đơn</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-    </View>
     );
   };
 
   return (
     <View style={styles.container}>
+      <Stack.Screen options={{ headerShown: false }} />
       <LinearGradient colors={[AppColors.primary, AppColors.primaryLight]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.header}>
         <View style={styles.headerContent}>
           <TouchableOpacity onPress={() => router.back()}>
@@ -244,7 +246,7 @@ export default function OrderHistoryScreen() {
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Lịch sử đơn hàng</Text>
           <View style={styles.headerActions}>
-            <Pressable onPress={() => Alert.alert('Tìm kiếm', 'Mở tìm kiếm') } style={styles.iconBtn}>
+            <Pressable onPress={() => Alert.alert('Tìm kiếm', 'Mở tìm kiếm')} style={styles.iconBtn}>
               <Search size={18} color="white" />
             </Pressable>
             <Pressable onPress={() => router.push('/(tabs)' as any)} style={styles.iconBtn}>

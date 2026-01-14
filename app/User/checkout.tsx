@@ -1114,4 +1114,3 @@ const styles = StyleSheet.create({
   },
 });
 
-

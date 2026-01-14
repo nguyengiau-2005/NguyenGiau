@@ -9,7 +9,11 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.nguyengiau.shop", 
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Ứng dụng cần truy cập vị trí của bạn để tự động điền địa chỉ giao hàng chính xác hơn."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -18,6 +22,12 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
+      "package": "com.nguyengiau.shop",
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "FOREGROUND_SERVICE"
+      ],
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
     },

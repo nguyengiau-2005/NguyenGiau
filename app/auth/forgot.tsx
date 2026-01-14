@@ -30,10 +30,25 @@ export default function ForgotPasswordScreen() {
 
     setIsLoading(true);
     try {
-      const { sessionId } = await sendOtp(phone);
-      Alert.alert('Đã gửi mã', `Mã xác thực đã được gửi tới ${phone}`);
-      // Navigate to reset page with phone & sessionId (sessionId is opaque)
-      router.push(`/auth/reset-password?phone=${encodeURIComponent(phone)}&sessionId=${sessionId}`);
+      // Giả sử sendOtp trả về cả sessionId và code (mã OTP)
+      const response = await sendOtp(phone);
+      const { sessionId, code } = response;
+
+      // Hiển thị mã OTP lên màn hình để người dùng biết (Dùng cho Demo)
+      Alert.alert(
+        'Xác thực hệ thống',
+        `Mã OTP của bạn là: ${code}\n(Mã này chỉ hiện thị ở bản thử nghiệm)`,
+        [
+          {
+            text: 'Tiếp tục',
+            onPress: () => {
+              // Chuyển hướng sau khi người dùng nhấn "Tiếp tục"
+              router.push(`/auth/reset-password?phone=${encodeURIComponent(phone)}&sessionId=${sessionId}`);
+            }
+          }
+        ]
+      );
+
     } catch (err) {
       console.warn('sendOtp error', err);
       Alert.alert('Lỗi', 'Không thể gửi mã. Vui lòng thử lại sau.');
@@ -41,7 +56,6 @@ export default function ForgotPasswordScreen() {
       setIsLoading(false);
     }
   };
-
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={{ flexGrow: 1 }} bounces={false}>

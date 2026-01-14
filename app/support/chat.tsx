@@ -1,15 +1,22 @@
 import { AppColors } from '@/constants/theme';
+import { formatPriceFromAPI } from '@/utils/formatPrice';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { ChevronLeft, Image as ImgIcon } from 'lucide-react-native';
+import { ChevronLeft, Image as ImgIcon, Star } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, Image, KeyboardAvoidingView, Platform, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Image, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 type ChatMessage = {
   id: string;
   sender: 'user' | 'bot' | 'agent';
   text?: string;
   imageUri?: string;
+  productCard?: {
+    id: string;
+    name: string;
+    price: string;
+    image: string;
+  };
   ts: number;
 };
 
@@ -17,17 +24,15 @@ const STORAGE_KEY = 'support_chat_history_v1';
 
 export default function ChatSupportScreen() {
   const router = useRouter();
-  const { productId, productName, productImage } = useLocalSearchParams();
+  const { productId, productName, productPrice, productImage } = useLocalSearchParams();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(true);
   const flatRef = useRef<FlatList<ChatMessage>>(null);
 
-  // Optional AsyncStorage
   let AsyncStorage: any | null = null;
   try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     AsyncStorage = require('@react-native-async-storage/async-storage').default;
   } catch (e) {
     AsyncStorage = null;
@@ -45,36 +50,45 @@ export default function ChatSupportScreen() {
       }
       setLoadingHistory(false);
 
-      // If coming from product detail, send initial message with product info
+      // Nếu có thông tin sản phẩm truyền sang
       if (productId && productName) {
         setTimeout(() => {
-          const initialText = `Tôi muốn tìm hiểu thêm về sản phẩm: ${productName}`;
-          const initialMsg: ChatMessage = {
-            id: Date.now().toString(),
+          const productMsg: ChatMessage = {
+            id: `prod_${Date.now()}`,
             sender: 'user',
-            text: initialText,
-            imageUri: productImage ? String(productImage) : undefined,
+            text: `Tôi muốn tìm hiểu thêm về sản phẩm này:`,
+            productCard: {
+              id: String(productId),
+              name: String(productName),
+              price: String(productPrice),
+              image: String(productImage),
+            },
             ts: Date.now()
           };
-          setMessages(prev => [...prev, initialMsg]);
+          
+          setMessages(prev => {
+            // Tránh duplicate tin nhắn sản phẩm khi reload
+            const exists = prev.find(m => m.productCard?.id === productId);
+            return exists ? prev : [...prev, productMsg];
+          });
 
-          // Auto reply from support
+          // Bot trả lời tự động
           setTimeout(() => {
             const replyMsg: ChatMessage = {
               id: (Date.now() + 1).toString(),
               sender: 'bot',
-              text: `Cảm ơn bạn đã quan tâm đến "${productName}". Nhân viên hỗ trợ sẽ sớm trả lời bạn. Vui lòng mô tả chi tiết câu hỏi của bạn.`,
+              text: `Chào bạn! Nhân viên tư vấn đã nhận được yêu cầu về sản phẩm "${productName}". Bạn cần hỗ trợ gì về giá hay cách sử dụng sản phẩm này không ạ?`,
               ts: Date.now()
             };
             setMessages(prev => [...prev, replyMsg]);
-          }, 600);
+          }, 800);
         }, 300);
       }
     })();
-  }, []);
+  }, [productId]);
 
   useEffect(() => {
-    if (!AsyncStorage) return;
+    if (!AsyncStorage || messages.length === 0) return;
     (async () => {
       try {
         await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
@@ -96,162 +110,155 @@ export default function ChatSupportScreen() {
     appendMessage(msg);
     setInput('');
 
-    // Simulate bot reply
     setTimeout(() => {
-      const bot: ChatMessage = { id: (Date.now() + 1).toString(), sender: 'bot', text: generateBotReply(msg), ts: Date.now() };
+      const bot: ChatMessage = { id: (Date.now() + 1).toString(), sender: 'bot', text: "Cảm ơn bạn, chúng tôi sẽ phản hồi sớm nhất!", ts: Date.now() };
       appendMessage(bot);
       setSending(false);
-    }, 800 + Math.random() * 900);
+    }, 1000);
   };
 
-  const generateBotReply = (userMsg: ChatMessage) => {
-    if (userMsg.imageUri) return 'Cảm ơn, chúng tôi đã nhận hình ảnh. Nhân viên sẽ kiểm tra và phản hồi sớm nhất.';
-
-    const t = (userMsg.text || '').toLowerCase();
-
-    // Câu hỏi về chất lượng sản phẩm
-    if (t.includes('chất lượng') || t.includes('hàng thật') || t.includes('chính hãng')) {
-      return '✓ Tất cả sản phẩm từ Fiora Luxe đều là hàng chính hãng 100%, có chứng chỉ. Bạn hoàn toàn yên tâm về chất lượng. Nếu phát hiện hàng giả, chúng tôi sẽ hoàn tiền ngay.';
-    }
-
-    // Câu hỏi về thành phần, công dụng
-    if (t.includes('thành phần') || t.includes('công dụng') || t.includes('cách dùng') || t.includes('thế nào')) {
-      return '📋 Chi tiết thành phần và hướng dẫn sử dụng của sản phẩm:\n\n• Thành phần chính: Chiết xuất tự nhiên, không chứa hóa chất độc hại\n• Công dụng: Dưỡng ẩm, cấp nước sâu cho da\n• Cách dùng: Dùng 2-3 lần/ngày, massage nhẹ cho đến hết thấm\n\nBạn cần thêm thông tin chi tiết?';
-    }
-
-    // Câu hỏi về giá, khuyến mãi
-    if (t.includes('giá') || t.includes('khuyến mãi') || t.includes('giảm giá') || t.includes('sale')) {
-      return '💰 Thông tin giá & khuyến mãi:\n\n• Giá hiện tại: Đã bao gồm VAT\n• Miễn phí ship cho đơn từ 200k\n• Nhập voucher để giảm thêm\n• Hoàn tiền 100% nếu không hài lòng trong 30 ngày\n\nBạn có muốn xem các voucher khả dụng?';
-    }
-
-    // Câu hỏi về giao hàng
-    if (t.includes('giao') || t.includes('ship') || t.includes('trễ') || t.includes('delivery')) {
-      return '🚚 Thông tin giao hàng:\n\n• Miễn phí ship với đơn ≥ 200k\n• Giao hàng 1-3 ngày làm việc (Hà Nội, TP.HCM)\n• Các tỉnh khác 2-5 ngày\n• Hỗ trợ giao hàng toàn quốc\n• Bạn sẽ nhận được tracking số để theo dõi\n\nCó cần trợ giúp gì khác không?';
-    }
-
-    // Câu hỏi về đổi trả
-    if (t.includes('đổi') || t.includes('trả') || t.includes('refund') || t.includes('hoàn')) {
-      return '↩️ Chính sách đổi trả:\n\n• Hạn đổi trả: 30 ngày kể từ khi nhận hàng\n• Lý do: Lỗi sản phẩm, không đúng mô tả, hết hạn\n• Qui trình: Liên hệ CSKH → Gửi ảnh/video → Xác nhận → Gửi hàng → Hoàn tiền\n• Phí ship đổi trả: Fiora Luxe chịu\n\nBạn cần thực hiện đổi trả?';
-    }
-
-    // Câu hỏi về allergen, thích hợp cho da
-    if (t.includes('da nhạy cảm') || t.includes('allergen') || t.includes('làn da') || t.includes('thích hợp')) {
-      return '🧴 Thích hợp cho da:\n\n• Da dầu: Khuyên sử dụng early morning\n• Da khô: Tăng tần suất sử dụng\n• Da nhạy cảm: Thử nghiệm trước 24h\n• Da hỗn hợp: Dùng cho các vùng cần thiết\n\nNếu bạn có da nhạy cảm, vui lòng xem thành phần chi tiết. Liên hệ nếu cần tư vấn.';
-    }
-
-    // Câu hỏi về bảo bì, hạn sử dụng
-    if (t.includes('bảo bì') || t.includes('hạn sử dụng') || t.includes('hsd') || t.includes('ngày hết hạn')) {
-      return '📦 Thông tin bảo bì & hạn sử dụng:\n\n• Bảo bì: Hộp bìa cao cấp, có seal chống giả\n• Hạn sử dụng: In rõ trên đáy sản phẩm\n• Bảo quản: Nơi mát, tránh nắng trực tiếp\n• Cam kết: Tất cả sản phẩm còn hạn 12+ tháng\n\nBạn kiểm tra được hạn sử dụng trên bao bì.';
-    }
-
-    // Câu hỏi về đánh giá, review
-    if (t.includes('đánh giá') || t.includes('review') || t.includes('ý kiến') || t.includes('nhận xét')) {
-      return '⭐ Đánh giá sản phẩm:\n\n• Rating: 4.8/5 sao từ 1.2k+ khách hàng\n• Điểm mạnh: Hiệu quả, giá tốt, giao nhanh\n• Điểm cần cải thiện: Bao bì có thể tươi hơn\n\nBạn hài lòng với sản phẩm này không? Vui lòng chia sẻ đánh giá của bạn!';
-    }
-
-    // Câu hỏi về thanh toán
-    if (t.includes('thanh toán') || t.includes('trả tiền') || t.includes('payment') || t.includes('payment method')) {
-      return '💳 Phương thức thanh toán:\n\n• Thanh toán trực tuyến: Visa, MasterCard, ZaloPay, Momo\n• Thanh toán khi nhận hàng (COD)\n• Chuyển khoản ngân hàng\n• Trả góp: Hỗ trợ qua các ứng dụng tín dụng\n\nChọn phương thức phù hợp nhất!';
-    }
-
-    // Câu hỏi chung
-    if (t.includes('xin chào') || t.includes('hello') || t.includes('hi')) {
-      return 'Xin chào! 👋 Chúng tôi sẵn lòng hỗ trợ bạn. Hãy cho chúng tôi biết:\n\n✓ Bạn muốn hỏi về sản phẩm?\n✓ Có vấn đề gì với đơn hàng?\n✓ Cần tư vấn sản phẩm khác?';
-    }
-
-    // Mặc định
-    return 'Cảm ơn bạn đã liên hệ! 😊 Vui lòng mô tả chi tiết vấn đề của bạn, CSKH sẽ trả lời trong 5 phút. Bạn có thể hỏi về:\n\n• Chất lượng, thành phần sản phẩm\n• Giao hàng, thanh toán\n• Đổi trả, hoàn tiền\n• Khuyến mãi, voucher';
-  };
-
-  const pickImage = async () => {
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const ImagePicker = require('expo-image-picker');
-      const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.7 });
-      if (!res.cancelled) {
-        await sendUserMessage(undefined, res.uri);
-      }
-    } catch (err) {
-      Alert.alert('Không thể chọn ảnh', 'Cài đặt `expo-image-picker` để gửi ảnh.');
-      console.warn('ImagePicker error', err);
-    }
-  };
-
-  const clearHistory = async () => {
-    Alert.alert('Xác nhận', 'Xóa lịch sử chat?', [
-      { text: 'Hủy', style: 'cancel' },
-      {
-        text: 'Xóa', style: 'destructive', onPress: async () => {
-          setMessages([]);
-          if (AsyncStorage) await AsyncStorage.removeItem(STORAGE_KEY);
-        }
-      }
-    ]);
-  };
+  const renderProductCard = (item: any) => (
+    <View style={styles.productCard}>
+      <Image source={{ uri: item.image }} style={styles.productImage} />
+      <View style={styles.productInfo}>
+        <Text style={styles.productNameText} numberOfLines={1}>{item.name}</Text>
+        <Text style={styles.productPriceText}>{formatPriceFromAPI(item.price)}</Text>
+        <View style={styles.ratingRow}>
+          {[1, 2, 3, 4, 5].map((s) => (
+            <Star key={s} size={10} color="#FFB300" fill="#FFB300" />
+          ))}
+          <Text style={styles.ratingText}>5.0</Text>
+        </View>
+      </View>
+      <TouchableOpacity 
+        style={styles.buyBtn}
+        onPress={() => router.push(`/product/${item.id}` as any)}
+      >
+        <Text style={styles.buyBtnText}>Xem</Text>
+      </TouchableOpacity>
+    </View>
+  );
 
   return (
-    <View style={{ flex: 1, backgroundColor: AppColors.background }}>
+    <View style={{ flex: 1, backgroundColor: '#F5F7FA' }}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      <LinearGradient colors={[AppColors.primary, AppColors.primaryLight]} style={{ paddingTop: 44, paddingBottom: 12, paddingHorizontal: 16 }}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
-            <TouchableOpacity onPress={() => router.back()}>
-              <ChevronLeft size={24} color="#fff" />
-            </TouchableOpacity>
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: '#fff', fontSize: 18, fontWeight: '800' }}>
-                {productName ? `Hỏi về: ${productName}` : 'Chat với CSKH'}
-              </Text>
-              <Text style={{ color: '#ffffff80', fontSize: 12, marginTop: 2 }}>Hỗ trợ 24/7</Text>
+      <LinearGradient colors={[AppColors.primary, AppColors.primaryLight]} style={styles.header}>
+        <View style={styles.headerContent}>
+          <TouchableOpacity onPress={() => router.back()}>
+            <ChevronLeft size={24} color="#fff" />
+          </TouchableOpacity>
+          <View style={{ flex: 1, marginLeft: 12 }}>
+            <Text style={styles.headerTitle}>Hỗ trợ khách hàng</Text>
+            <View style={styles.onlineStatus}>
+              <View style={styles.onlineDot} />
+              <Text style={styles.onlineText}>Đang trực tuyến</Text>
             </View>
           </View>
-          <TouchableOpacity onPress={clearHistory} style={{ padding: 6 }}>
-            <Text style={{ color: '#fff', fontSize: 12 }}>Xóa</Text>
+          <TouchableOpacity onPress={clearHistory}>
+            <Text style={{ color: '#fff', fontSize: 13, opacity: 0.8 }}>Xóa lịch sử</Text>
           </TouchableOpacity>
         </View>
       </LinearGradient>
 
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={90}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}>
         {loadingHistory ? (
-          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-            <ActivityIndicator size="large" color={AppColors.primary} />
-          </View>
+          <ActivityIndicator style={{ flex: 1 }} color={AppColors.primary} />
         ) : (
           <FlatList
             ref={flatRef}
             data={messages}
             keyExtractor={m => m.id}
-            contentContainerStyle={{ padding: 12, paddingBottom: 96 }}
+            contentContainerStyle={{ padding: 16, paddingBottom: 100 }}
             renderItem={({ item }) => (
-              <View style={{ marginBottom: 12, alignItems: item.sender === 'user' ? 'flex-end' : 'flex-start' }}>
-                <View style={{ maxWidth: '82%', backgroundColor: item.sender === 'user' ? AppColors.primary : '#fff', padding: 10, borderRadius: 10 }}>
-                  {item.text ? <Text style={{ color: item.sender === 'user' ? '#fff' : '#333' }}>{item.text}</Text> : null}
-                  {item.imageUri ? <Image source={{ uri: item.imageUri }} style={{ width: 200, height: 140, borderRadius: 8, marginTop: 8 }} /> : null}
-                  <Text style={{ fontSize: 10, color: item.sender === 'user' ? '#fff' : '#999', marginTop: 6 }}>{new Date(item.ts).toLocaleTimeString()}</Text>
+              <View style={[styles.messageRow, item.sender === 'user' ? styles.userRow : styles.botRow]}>
+                <View style={[styles.bubble, item.sender === 'user' ? styles.userBubble : styles.botBubble]}>
+                  {item.text && <Text style={[styles.messageText, item.sender === 'user' ? styles.userText : styles.botText]}>{item.text}</Text>}
+                  {item.productCard && renderProductCard(item.productCard)}
+                  {item.imageUri && <Image source={{ uri: item.imageUri }} style={styles.attachedImage} />}
+                  <Text style={[styles.timestamp, item.sender === 'user' ? styles.userTime : styles.botTime]}>
+                    {new Date(item.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </Text>
                 </View>
               </View>
             )}
           />
         )}
 
-        <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: 12, backgroundColor: AppColors.surface, borderTopWidth: 1, borderTopColor: AppColors.divider }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <TouchableOpacity onPress={pickImage} style={{ padding: 8 }}>
-              <ImgIcon color={AppColors.primary} />
-            </TouchableOpacity>
-            <TextInput
-              placeholder="Nhập tin nhắn..."
-              value={input}
-              onChangeText={setInput}
-              style={{ flex: 1, backgroundColor: '#fff', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8 }}
-            />
-            <TouchableOpacity onPress={() => sendUserMessage(input)} disabled={sending || input.trim().length === 0} style={{ marginLeft: 8, backgroundColor: input.trim() ? AppColors.primary : '#ccc', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 8 }}>
-              <Text style={{ color: '#fff', fontWeight: '700' }}>{sending ? '...' : 'Gửi'}</Text>
-            </TouchableOpacity>
-          </View>
+        <View style={styles.inputContainer}>
+          <TouchableOpacity onPress={pickImage} style={styles.iconButton}>
+            <ImgIcon size={22} color={AppColors.primary} />
+          </TouchableOpacity>
+          <TextInput
+            placeholder="Nhập tin nhắn..."
+            value={input}
+            onChangeText={setInput}
+            multiline
+            style={styles.textInput}
+          />
+          <TouchableOpacity 
+            onPress={() => sendUserMessage(input)} 
+            disabled={!input.trim()}
+            style={[styles.sendButton, { backgroundColor: input.trim() ? AppColors.primary : '#E0E0E0' }]}
+          >
+            <Text style={styles.sendButtonText}>Gửi</Text>
+          </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
     </View>
   );
+
+  async function pickImage() {
+    try {
+      const ImagePicker = require('expo-image-picker');
+      const res = await ImagePicker.launchImageLibraryAsync({ quality: 0.7 });
+      if (!res.canceled) sendUserMessage(undefined, res.assets[0].uri);
+    } catch (e) { Alert.alert("Lỗi", "Không thể chọn ảnh"); }
+  }
+
+  function clearHistory() {
+    Alert.alert('Xóa chat', 'Bạn có muốn xóa toàn bộ lịch sử trò chuyện?', [
+      { text: 'Hủy' },
+      { text: 'Xóa', style: 'destructive', onPress: async () => {
+          setMessages([]);
+          if (AsyncStorage) await AsyncStorage.removeItem(STORAGE_KEY);
+      }}
+    ]);
+  }
 }
+
+const styles = StyleSheet.create({
+  header: { paddingTop: 50, paddingBottom: 15, paddingHorizontal: 16 },
+  headerContent: { flexDirection: 'row', alignItems: 'center' },
+  headerTitle: { color: '#fff', fontSize: 17, fontWeight: 'bold' },
+  onlineStatus: { flexDirection: 'row', alignItems: 'center', marginTop: 2 },
+  onlineDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#4ADE80', marginRight: 5 },
+  onlineText: { color: '#fff', fontSize: 11, opacity: 0.8 },
+  messageRow: { marginBottom: 16, flexDirection: 'row' },
+  userRow: { justifyContent: 'flex-end' },
+  botRow: { justifyContent: 'flex-start' },
+  bubble: { maxWidth: '85%', padding: 12, borderRadius: 16 },
+  userBubble: { backgroundColor: AppColors.primary, borderBottomRightRadius: 4 },
+  botBubble: { backgroundColor: '#fff', borderBottomLeftRadius: 4, elevation: 1, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 2 },
+  messageText: { fontSize: 15, lineHeight: 20 },
+  userText: { color: '#fff' },
+  botText: { color: '#333' },
+  timestamp: { fontSize: 10, marginTop: 4 },
+  userTime: { color: 'rgba(255,255,255,0.7)', textAlign: 'right' },
+  botTime: { color: '#999' },
+  productCard: { backgroundColor: '#fff', borderRadius: 10, padding: 8, flexDirection: 'row', alignItems: 'center', marginTop: 10, width: 240, borderWidth: 1, borderColor: '#EEE' },
+  productImage: { width: 50, height: 50, borderRadius: 6, backgroundColor: '#F9F9F9' },
+  productInfo: { flex: 1, marginLeft: 10 },
+  productNameText: { fontSize: 13, fontWeight: 'bold', color: '#333' },
+  productPriceText: { fontSize: 12, color: AppColors.primary, fontWeight: '700', marginTop: 2 },
+  ratingRow: { flexDirection: 'row', alignItems: 'center', marginTop: 2 },
+  ratingText: { fontSize: 10, color: '#666', marginLeft: 4 },
+  buyBtn: { backgroundColor: AppColors.primary, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6 },
+  buyBtnText: { color: '#fff', fontSize: 11, fontWeight: 'bold' },
+  attachedImage: { width: 200, height: 150, borderRadius: 10, marginTop: 8 },
+  inputContainer: { flexDirection: 'row', alignItems: 'center', padding: 10, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#EEE', paddingBottom: Platform.OS === 'ios' ? 25 : 10 },
+  iconButton: { padding: 8 },
+  textInput: { flex: 1, backgroundColor: '#F0F2F5', borderRadius: 20, paddingHorizontal: 15, paddingVertical: 8, maxHeight: 100, fontSize: 15 },
+  sendButton: { marginLeft: 10, width: 45, height: 45, borderRadius: 22.5, justifyContent: 'center', alignItems: 'center' },
+  sendButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 13 }
+});

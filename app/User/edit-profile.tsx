@@ -3,16 +3,30 @@ import { useAuth } from '@/contexts/Auth';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useRouter } from 'expo-router';
-import { Camera, ChevronLeft } from 'lucide-react-native';
+import { Camera, ChevronLeft, Mail, Phone, User as UserIcon } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
+} from 'react-native';
 
 export default function EditProfileScreen() {
   const router = useRouter();
   const { user, updateProfile } = useAuth();
+  
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [gender, setGender] = useState<'male' | 'female'>('male');
   const [isLoading, setIsLoading] = useState(false);
   const [avatarUri, setAvatarUri] = useState<string | undefined>(undefined);
 
@@ -22,6 +36,8 @@ export default function EditProfileScreen() {
       setEmail(user.email || '');
       setPhone(user.phone || '');
       setAvatarUri(user.avatar);
+      // Giả sử context có lưu giới tính, nếu không mặc định là 'male'
+      if ((user as any).gender) setGender((user as any).gender);
     }
   }, [user]);
 
@@ -29,279 +45,287 @@ export default function EditProfileScreen() {
     if (!fullName.trim()) return Alert.alert('Lỗi', 'Vui lòng nhập họ và tên');
     setIsLoading(true);
     try {
-      await updateProfile(fullName.trim(), phone.trim());
+      // Truyền thêm giới tính vào hàm update
+      await updateProfile(fullName.trim(), phone.trim(), avatarUri);
       setIsLoading(false);
-      Alert.alert('Thành công', 'Hồ sơ đã được cập nhật', [
-        { text: 'OK', onPress: () => router.back() },
+      Alert.alert('Thành công', 'Hồ sơ của bạn đã được cập nhật', [
+        { text: 'Xong', onPress: () => router.back() },
       ]);
     } catch (err) {
       setIsLoading(false);
-      Alert.alert('Lỗi', 'Cập nhật không thành công');
+      Alert.alert('Lỗi', 'Không thể lưu thay đổi');
     }
   };
+
   const pickImage = async (useCamera: boolean) => {
     try {
       let result;
+      const options: ImagePicker.ImagePickerOptions = {
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.7,
+      };
 
       if (useCamera) {
-        const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
-        if (!permissionResult.granted) {
-          Alert.alert('Lỗi quyền', 'Cần quyền truy cập camera để chụp ảnh.');
-          return;
-        }
-        result = await ImagePicker.launchCameraAsync({
-          mediaTypes: ImagePicker.MediaTypeOptions.Images,
-          allowsEditing: true,
-          aspect: [1, 1],
-          quality: 0.8,
-        });
+        const { granted } = await ImagePicker.requestCameraPermissionsAsync();
+        if (!granted) return Alert.alert('Lỗi', 'Cần quyền máy ảnh');
+        result = await ImagePicker.launchCameraAsync(options);
       } else {
-        const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (!permissionResult.granted) {
-          Alert.alert('Lỗi quyền', 'Cần quyền truy cập thư viện ảnh.');
-          return;
-        }
-        result = await ImagePicker.launchImageLibraryAsync({
-          mediaTypes: ImagePicker.MediaTypeOptions.Images,
-          allowsEditing: true,
-          aspect: [1, 1],
-          quality: 0.8,
-        });
+        const { granted } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (!granted) return Alert.alert('Lỗi', 'Cần quyền thư viện ảnh');
+        result = await ImagePicker.launchImageLibraryAsync(options);
       }
 
-      if (!result.canceled && result.assets && result.assets.length > 0) {
-        const uri = result.assets[0].uri;
-        setAvatarUri(uri);
-        try {
-          setIsLoading(true);
-          await updateProfile(fullName.trim() || user?.fullName || '', phone.trim() || user?.phone || '', uri);
-          setIsLoading(false);
-          Alert.alert('Thành công', 'Ảnh đại diện đã được cập nhật');
-        } catch (err) {
-          setIsLoading(false);
-          Alert.alert('Lỗi', 'Không thể cập nhật ảnh đại diện');
-        }
+      if (!result.canceled && result.assets?.[0]) {
+        setAvatarUri(result.assets[0].uri);
       }
     } catch (err) {
-      console.log('pickImage error', err);
-      Alert.alert('Lỗi', 'Không thể mở trình chọn ảnh');
+      Alert.alert('Lỗi', 'Không thể chọn ảnh');
     }
   };
 
   const handleChangeAvatar = () => {
-    Alert.alert('Thay đổi ảnh đại diện', 'Chọn cách thay đổi ảnh đại diện', [
+    Alert.alert('Ảnh đại diện', 'Chọn nguồn ảnh', [
       { text: 'Chụp ảnh', onPress: () => pickImage(true) },
-      { text: 'Chọn từ thư viện', onPress: () => pickImage(false) },
+      { text: 'Thư viện ảnh', onPress: () => pickImage(false) },
       { text: 'Hủy', style: 'cancel' },
     ]);
   };
 
   return (
-
-    <ScrollView style={styles.container}>
+    <KeyboardAvoidingView 
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
+      style={styles.container}
+    >
       <Stack.Screen options={{ headerShown: false }} />
-      {/* Header */}
-      <LinearGradient colors={[AppColors.primary, AppColors.primaryLight]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.header}>
+      
+      {/* Header Gradient */}
+      <LinearGradient 
+        colors={[AppColors.primary, AppColors.primaryLight]} 
+        style={styles.header}
+      >
         <View style={styles.headerContent}>
-          <TouchableOpacity onPress={() => router.back()}>
-            <ChevronLeft size={24} color="white" />
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <ChevronLeft size={28} color="white" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Chỉnh sửa hồ sơ</Text>
-          <View style={{ width: 24 }} />
+          <View style={{ width: 40 }} />
         </View>
       </LinearGradient>
 
-      {/* Avatar Section */}
-      <View style={styles.avatarContainer}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{user?.fullName ? user.fullName.split(' ').map(n => n[0]).slice(0, 2).join('') : 'NG'}</Text>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+        {/* Avatar Section */}
+        <View style={styles.avatarSection}>
+          <TouchableOpacity onPress={handleChangeAvatar} activeOpacity={0.9}>
+            <View style={styles.avatarWrapper}>
+              {avatarUri ? (
+                <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
+              ) : (
+                <View style={styles.avatarPlaceholder}>
+                  <Text style={styles.avatarText}>
+                    {fullName ? fullName.charAt(0).toUpperCase() : 'U'}
+                  </Text>
+                </View>
+              )}
+              <View style={styles.cameraBadge}>
+                <Camera size={16} color="white" />
+              </View>
+            </View>
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity onPress={handleChangeAvatar} style={styles.cameraButton}>
-          <Camera size={16} color="white" />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={handleChangeAvatar} style={styles.changeAvatarButton}>
-          <Text style={styles.changeAvatarText}>Thay đổi ảnh đại diện</Text>
-        </TouchableOpacity>
-      </View>
 
-      {/* Form Fields */}
-      <View style={styles.formContainer}>
-        {/* Full Name */}
-        <View style={styles.formGroup}>
-          <Text style={styles.label}>Họ và tên</Text>
-          <View style={styles.inputWrapper}>
-            <Text style={styles.inputIcon}>👤</Text>
-            <TextInput
-              value={fullName}
-              onChangeText={setFullName}
-              style={[styles.input, { paddingVertical: 12 }]}
-              placeholder="Họ và tên"
-            />
+        <View style={styles.formCard}>
+          {/* Full Name */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Họ và tên</Text>
+            <View style={styles.inputContainer}>
+              <UserIcon size={20} color={AppColors.primary} style={styles.iconStyle} />
+              <TextInput
+                value={fullName}
+                onChangeText={setFullName}
+                placeholder="Ví dụ: Nguyễn Văn A"
+                style={styles.textInput}
+              />
+            </View>
           </View>
-        </View>
 
-        {/* Email (read-only) */}
-        <View style={styles.formGroup}>
-          <Text style={styles.label}>Email</Text>
-          <View style={styles.inputWrapper}>
-            <Text style={styles.inputIcon}>📧</Text>
-            <View style={styles.input}>
-              <Text style={styles.inputText}>{email}</Text>
+          {/* GENDER SELECTION */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Giới tính</Text>
+            <View style={styles.genderRow}>
+              <TouchableOpacity 
+                style={[styles.genderBox, gender === 'male' && styles.genderBoxActive]} 
+                onPress={() => setGender('male')}
+              >
+                <View style={[styles.radio, gender === 'male' && styles.radioActive]}>
+                   {gender === 'male' && <View style={styles.radioInner} />}
+                </View>
+                <Text style={[styles.genderLabel, gender === 'male' && styles.genderLabelActive]}>Nam</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={[styles.genderBox, gender === 'female' && styles.genderBoxActive]} 
+                onPress={() => setGender('female')}
+              >
+                <View style={[styles.radio, gender === 'female' && styles.radioActive]}>
+                   {gender === 'female' && <View style={styles.radioInner} />}
+                </View>
+                <Text style={[styles.genderLabel, gender === 'female' && styles.genderLabelActive]}>Nữ</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Email */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Email</Text>
+            <View style={[styles.inputContainer, styles.disabledInput]}>
+              <Mail size={20} color="#999" style={styles.iconStyle} />
+              <Text style={styles.readOnlyText}>{email}</Text>
+            </View>
+          </View>
+
+          {/* Phone */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Số điện thoại</Text>
+            <View style={styles.inputContainer}>
+              <Phone size={20} color={AppColors.primary} style={styles.iconStyle} />
+              <TextInput
+                value={phone}
+                onChangeText={setPhone}
+                placeholder="Nhập số điện thoại"
+                keyboardType="phone-pad"
+                style={styles.textInput}
+              />
             </View>
           </View>
         </View>
 
-        {/* Phone */}
-        <View style={styles.formGroup}>
-          <Text style={styles.label}>Số điện thoại</Text>
-          <View style={styles.inputWrapper}>
-            <Text style={styles.inputIcon}>📱</Text>
-            <TextInput
-              value={phone}
-              onChangeText={setPhone}
-              style={[styles.input, { paddingVertical: 12 }]}
-              placeholder="Số điện thoại"
-              keyboardType="phone-pad"
-            />
-          </View>
+        {/* Action Button */}
+        <View style={styles.footer}>
+          <TouchableOpacity onPress={handleSave} disabled={isLoading}>
+            <LinearGradient
+              colors={[AppColors.primary, AppColors.primaryLight]}
+              start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+              style={styles.saveButton}
+            >
+              {isLoading ? (
+                <ActivityIndicator color="white" />
+              ) : (
+                <Text style={styles.saveButtonText}>Lưu thay đổi</Text>
+              )}
+            </LinearGradient>
+          </TouchableOpacity>
         </View>
-
-        {/* Save Button */}
-        <TouchableOpacity
-          onPress={handleSave}
-          disabled={isLoading}
-          style={[styles.saveButton, isLoading && { opacity: 0.6 }]}
-        >
-          <Text style={styles.saveButtonText}>{isLoading ? 'Đang lưu...' : 'Lưu thay đổi'}</Text>
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
+  container: { flex: 1, backgroundColor: '#F5F7FA' },
   header: {
-    paddingTop: 15,
-    paddingBottom: 20,
-    paddingHorizontal: 16,
-  },
-  headerContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: 'white',
-  },
-  avatarContainer: {
-    alignItems: 'center',
-    paddingVertical: 30,
-  },
-  avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: AppColors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  avatarText: {
-    fontSize: 40,
-    fontWeight: 'bold',
-    color: 'white',
-  },
-  cameraButton: {
-    position: 'absolute',
-    bottom: 50,
-    right: '35%',
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: AppColors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  changeAvatarButton: {
-    marginTop: 8,
+    paddingTop: 55,
+    paddingBottom: 30,
     paddingHorizontal: 20,
-    paddingVertical: 8,
-    backgroundColor: AppColors.primary,
-    borderRadius: 20,
+    borderBottomLeftRadius: 35,
+    borderBottomRightRadius: 35,
   },
-  changeAvatarText: {
-    color: 'white',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  formContainer: {
-    paddingHorizontal: 16,
-    marginBottom: 30,
-  },
-  formGroup: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 8,
-    color: '#333',
-  },
-  inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  headerContent: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  backButton: { padding: 8, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 12 },
+  headerTitle: { fontSize: 20, fontWeight: '800', color: 'white' },
+  avatarSection: { alignItems: 'center', marginTop: -55, marginBottom: 25 },
+  avatarWrapper: {
+    padding: 5,
     backgroundColor: 'white',
-    borderRadius: 12,
-    paddingHorizontal: 12,
+    borderRadius: 65,
+    elevation: 8,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 1,
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
   },
-  inputIcon: {
-    fontSize: 18,
-    marginRight: 8,
-  },
-  input: {
-    flex: 1,
-    paddingVertical: 12,
-  },
-  inputText: {
-    fontSize: 14,
-    color: '#333',
-  },
-  saveButton: {
+  avatarImage: { width: 110, height: 110, borderRadius: 55 },
+  avatarPlaceholder: { width: 110, height: 110, borderRadius: 55, backgroundColor: AppColors.primary, justifyContent: 'center', alignItems: 'center' },
+  avatarText: { fontSize: 40, fontWeight: 'bold', color: 'white' },
+  cameraBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 5,
     backgroundColor: AppColors.primary,
-    borderRadius: 12,
-    paddingVertical: 14,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 20,
+    borderWidth: 3,
+    borderColor: 'white',
+  },
+  formCard: {
+    backgroundColor: 'white',
+    marginHorizontal: 20,
+    borderRadius: 25,
+    padding: 24,
+    elevation: 3,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
   },
-  saveButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
+  inputGroup: { marginBottom: 20 },
+  inputLabel: { fontSize: 14, fontWeight: '700', color: '#444', marginBottom: 10, marginLeft: 2 },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8F9FA',
+    borderRadius: 15,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: '#F1F3F5',
   },
+  iconStyle: { marginRight: 12 },
+  textInput: { flex: 1, paddingVertical: 14, fontSize: 15, color: '#333', fontWeight: '600' },
+  disabledInput: { backgroundColor: '#F1F3F5', borderColor: '#E9ECEF' },
+  readOnlyText: { flex: 1, paddingVertical: 14, fontSize: 15, color: '#999', fontWeight: '500' },
+  
+  // Gender Styles
+  genderRow: { flexDirection: 'row', gap: 12 },
+  genderBox: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8F9FA',
+    padding: 14,
+    borderRadius: 15,
+    borderWidth: 1.5,
+    borderColor: '#F1F3F5',
+  },
+  genderBoxActive: { backgroundColor: AppColors.primary + '10', borderColor: AppColors.primary },
+  radio: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#DDD',
+    marginRight: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  radioActive: { borderColor: AppColors.primary },
+  radioInner: { width: 10, height: 10, borderRadius: 5, backgroundColor: AppColors.primary },
+  genderLabel: { fontSize: 15, fontWeight: '600', color: '#666' },
+  genderLabelActive: { color: AppColors.primary, fontWeight: '700' },
+
+  footer: { padding: 20, marginTop: 10 },
+  saveButton: {
+    paddingVertical: 16,
+    borderRadius: 20,
+    alignItems: 'center',
+    shadowColor: AppColors.primary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  saveButtonText: { color: 'white', fontSize: 17, fontWeight: '800' },
 });
