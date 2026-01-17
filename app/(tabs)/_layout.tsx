@@ -21,6 +21,7 @@ export default function TabLayout() {
         options={{
           title: 'Home',
           tabBarIcon: ({ color }) => <Home size={28} color={color} />,
+          headerShown: false,
         }}
       />
       <Tabs.Screen
@@ -28,6 +29,7 @@ export default function TabLayout() {
         options={{
           title: 'Yêu thích',
           tabBarIcon: ({ color }) => <Heart size={28} color={color} />,
+          headerShown: false,
         }}
       />
       <Tabs.Screen
@@ -35,6 +37,7 @@ export default function TabLayout() {
         options={{
           title: 'Giỏ hàng',
           tabBarIcon: ({ color }) => <ShoppingCart size={28} color={color} />,
+          headerShown: false,
         }}
       />
       <Tabs.Screen

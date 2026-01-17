@@ -12,7 +12,7 @@ function generateSessionId() {
   return Math.random().toString(36).slice(2, 10);
 }
 
-export async function sendOtp(phone: string): Promise<{ sessionId: string }> {
+export async function sendOtp(phone: string): Promise<{ sessionId: string; otp: string }> {
   // Simulate network latency
   await new Promise((r) => setTimeout(r, 600));
   const otp = Math.floor(100000 + Math.random() * 900000).toString();
@@ -22,7 +22,7 @@ export async function sendOtp(phone: string): Promise<{ sessionId: string }> {
   // In production, you would call an SMS provider here.
   // eslint-disable-next-line no-console
   console.log(`[mock-auth] sendOtp -> phone=${phone} otp=${otp} session=${sessionId}`);
-  return { sessionId };
+  return { sessionId, otp };
 }
 
 export async function verifyOtp(sessionId: string, code: string): Promise<boolean> {

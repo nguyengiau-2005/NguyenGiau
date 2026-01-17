@@ -1,257 +1,219 @@
-import { AppColors } from '@/constants/theme';
-import useDeviceLocation from '@/hooks/useDeviceLocation';
+import { AppColors, Fonts } from '@/constants/theme';
+import { useAuth } from '@/contexts/Auth';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { ChevronRight } from 'lucide-react-native';
+import {
+  Bell,
+  ChevronRight,
+  CreditCard,
+  Globe,
+  Heart,
+  HelpCircle,
+  LogOut,
+  MapPin,
+  Moon,
+  Package,
+  Settings,
+  ShieldCheck,
+  ShoppingBag,
+  Ticket,
+  Truck,
+  User,
+  Wallet
+} from 'lucide-react-native';
 import React, { useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-interface UserInfo {
-  id: string;
-  fullName: string;
-  email: string;
-  phone: string;
-  address: string;
-  membership: 'bronze' | 'silver' | 'gold';
-  points: number;
-  avatar?: string;
-}
-
 export default function UserProfileScreen() {
   const router = useRouter();
-  const [userInfo] = useState<UserInfo>({
-    id: 'USR001',
-    fullName: 'Nguyễn Giao',
-    email: 'nguyengiao@email.com',
-    phone: '+84 123 456 789',
-    address: '123 Đường Lê Lợi, Quận 1, TP.HCM',
-    membership: 'gold',
-    points: 2500,
-  });
+  const { user, logout } = useAuth(); // Lấy thông tin từ Context thật
+
+  // Mockup data nếu user chưa có (để view đẹp khi dev)
+  const displayUser = user || {
+    full_name: 'Khách hàng',
+    email: 'khachhang@example.com',
+    points: 0,
+    role: { value: 'User' }
+  };
 
   const [orderStatus] = useState({
     pending: 2,
-    picking: 1,
-    shipping: 3,
+    shipping: 1,
     delivered: 15,
     cancelled: 0,
   });
 
-  const membershipColors = {
-    bronze: '#CD7F32',
-    silver: '#C0C0C0',
-    gold: '#FFD700',
-  };
-
   const handleLogout = () => {
-    Alert.alert(
-      'Đăng xuất',
-      'Bạn có chắc chắn muốn đăng xuất?',
-      [
-        { text: 'Hủy', onPress: () => {}, style: 'cancel' },
-        {
-          text: 'Đăng xuất',
-          onPress: () => {
-            // Handle logout
-            router.replace('/auth/login' as any);
-          },
-          style: 'destructive',
+    Alert.alert('Đăng xuất', 'Bạn có chắc chắn muốn đăng xuất?', [
+      { text: 'Hủy', style: 'cancel' },
+      {
+        text: 'Đăng xuất',
+        style: 'destructive',
+        onPress: async () => {
+           await logout();
+           // AuthContext sẽ tự redirect, nhưng thêm dòng này cho chắc
+           router.replace('/auth/login');
         },
-      ]
-    );
+      },
+    ]);
   };
 
-  const quickActionButtons = [
-    { label: 'Đơn hàng', icon: '📦', route: '/user/order-history', color: '#FF6B6B' },
-    { label: 'Ví tiền', icon: '💳', route: '/user/payment', color: '#4ECDC4' },
-    { label: 'Vouchers', icon: '🎟️', route: '/user/address', color: '#FFE66D' },
-    { label: 'Yêu thích', icon: '❤️', route: '/user/address', color: '#FF85A2' },
-  ];
+  // Component hiển thị item trong menu
+  const MenuItem = ({ icon: Icon, title, value, onPress, isLast = false, color = '#333' }: any) => (
+    <TouchableOpacity
+      onPress={onPress}
+      style={[styles.menuItem, isLast && styles.menuItemNoBorder]}
+      activeOpacity={0.7}
+    >
+      <View style={[styles.menuIconBox, { backgroundColor: `${color}15` }]}>
+        <Icon size={20} color={color} />
+      </View>
+      <Text style={styles.menuTitle}>{title}</Text>
+      {value && <Text style={styles.menuValue}>{value}</Text>}
+      <ChevronRight size={18} color="#C7C7CC" />
+    </TouchableOpacity>
+  );
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {/* Header Gradient */}
-      <LinearGradient colors={[AppColors.primary, AppColors.primaryLight]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.header}>
-        <View style={styles.headerContent}>
-          <View style={styles.headerIcons}>
-            <TouchableOpacity onPress={() => router.push('/user/edit-profile' as any)}>
-              <Text style={{ fontSize: 20 }}>⚙️</Text>
-            </TouchableOpacity>
-            <TouchableOpacity>
-              <Text style={{ fontSize: 20 }}>🔔</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => router.push('/(tabs)' as any)}>
-              <Text style={{ fontSize: 20 }}>🛒</Text>
-            </TouchableOpacity>
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false} bounces={false}>
+      {/* --- HEADER --- */}
+      <View style={styles.headerContainer}>
+        <LinearGradient
+          colors={[AppColors.primary, AppColors.primaryLight]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.headerGradient}
+        >
+          <View style={styles.topBar}>
+            <Text style={styles.headerTitle}>Hồ sơ</Text>
+            <View style={styles.topBarIcons}>
+              <TouchableOpacity style={styles.iconBtn}>
+                <Bell size={24} color="#FFF" />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.iconBtn} onPress={() => router.push('/user/edit-profile')}>
+                <Settings size={24} color="#FFF" />
+              </TouchableOpacity>
+            </View>
           </View>
-          <Text style={styles.headerTitle}>Tài khoản của tôi</Text>
-        </View>
-      </LinearGradient>
 
-      {/* User Info Card */}
-      <View style={styles.userInfoCard}>
-        <View style={styles.avatarSection}>
-          <TouchableOpacity
-            onPress={() => router.push('/user/edit-profile' as any)}
-            style={styles.avatarWrapper}
-          >
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>NG</Text>
-            </View>
-            <View style={styles.editBadge}>
-              <Text>✏️</Text>
-            </View>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.userDetails}>
-          <Text style={styles.fullName}>{userInfo.fullName}</Text>
-          <Text style={styles.email}>{userInfo.email}</Text>
-          {/* show detected device address as suggestion */}
-          {(() => {
-            const { address: detectedAddress, loading: locationLoading, fetchLocation } = useDeviceLocation();
-            return detectedAddress ? (
-              <View style={{ marginTop: 8 }}>
-                <Text style={{ fontSize: 12, color: '#666' }}>Vị trí hiện tại: {locationLoading ? 'Đang lấy...' : detectedAddress}</Text>
-                <TouchableOpacity onPress={() => router.push('/user/address' as any)}>
-                  <Text style={{ color: AppColors.primary, marginTop: 6 }}>Cập nhật địa chỉ</Text>
-                </TouchableOpacity>
+          {/* User Info Block */}
+          <View style={styles.userInfoBlock}>
+            <View style={styles.avatarContainer}>
+              {/* Nếu có avatar thật thì dùng Image, ko thì dùng Text */}
+              <View style={styles.avatar}>
+                <Text style={styles.avatarText}>
+                    {displayUser.full_name?.charAt(0)?.toUpperCase() || 'U'}
+                </Text>
               </View>
-            ) : null;
-          })()}
-          <View style={[styles.membershipBadge, { backgroundColor: membershipColors[userInfo.membership] }]}>
-            <Text style={styles.membershipText}>
-              {userInfo.membership.charAt(0).toUpperCase() + userInfo.membership.slice(1)} • {userInfo.points} pts
-            </Text>
-          </View>
-        </View>
-      </View>
-
-      {/* Quick Action Buttons */}
-      <View style={styles.quickActionsContainer}>
-        <View style={styles.quickActionsGrid}>
-          {quickActionButtons.map((btn, idx) => (
-            <TouchableOpacity
-              key={idx}
-              onPress={() => router.push(btn.route as any)}
-              style={[styles.quickActionBtn, { backgroundColor: btn.color }]}
-            >
-              <Text style={styles.quickActionIcon}>{btn.icon}</Text>
-              <Text style={styles.quickActionLabel}>{btn.label}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-
-      {/* Order Status */}
-      <View style={styles.sectionContainer}>
-        <Text style={styles.sectionTitle}>Trạng thái đơn hàng</Text>
-        <View style={styles.statusGrid}>
-          {[
-            { label: 'Chờ xử lý', count: orderStatus.pending, color: '#FF9999' },
-            { label: 'Đang chọn', count: orderStatus.picking, color: '#FFB366' },
-            { label: 'Đang giao', count: orderStatus.shipping, color: '#FFD699' },
-            { label: 'Đã giao', count: orderStatus.delivered, color: '#99FF99' },
-            { label: 'Hủy', count: orderStatus.cancelled, color: '#FF9999' },
-          ].map((status, idx) => (
-            <View key={idx} style={[styles.statusBox, { backgroundColor: status.color }]}>
-              <Text style={styles.statusCount}>{status.count}</Text>
-              <Text style={styles.statusLabel}>{status.label}</Text>
+              <TouchableOpacity style={styles.editAvatarBadge}>
+                <Settings size={12} color="#FFF" />
+              </TouchableOpacity>
             </View>
-          ))}
+            <View style={styles.userTextView}>
+              <Text style={styles.userName}>{displayUser.full_name}</Text>
+              <Text style={styles.userEmail}>{displayUser.email}</Text>
+              <View style={styles.pointBadge}>
+                <Text style={styles.pointText}>💎 {displayUser.points || 0} Points</Text>
+              </View>
+            </View>
+          </View>
+        </LinearGradient>
+      </View>
+
+      <View style={styles.bodyContainer}>
+        
+        {/* --- ĐƠN HÀNG (ORDER STATUS) --- */}
+        <View style={styles.sectionCard}>
+            <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Đơn hàng của tôi</Text>
+                <TouchableOpacity onPress={() => router.push('/user/order-history')}>
+                    <Text style={styles.seeAllText}>Xem tất cả</Text>
+                </TouchableOpacity>
+            </View>
+            
+            <View style={styles.orderStatusRow}>
+                <TouchableOpacity style={styles.statusItem}>
+                    <View style={styles.statusIconBadge}>
+                        <Package size={24} color={AppColors.primary} />
+                        {orderStatus.pending > 0 && <View style={styles.badgeCount}><Text style={styles.badgeText}>{orderStatus.pending}</Text></View>}
+                    </View>
+                    <Text style={styles.statusLabel}>Chờ xử lý</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.statusItem}>
+                    <View style={styles.statusIconBadge}>
+                        <Truck size={24} color={AppColors.primary} />
+                        {orderStatus.shipping > 0 && <View style={styles.badgeCount}><Text style={styles.badgeText}>{orderStatus.shipping}</Text></View>}
+                    </View>
+                    <Text style={styles.statusLabel}>Đang giao</Text>
+                </TouchableOpacity>
+
+                 <TouchableOpacity style={styles.statusItem}>
+                    <View style={styles.statusIconBadge}>
+                        <ShoppingBag size={24} color={AppColors.primary} />
+                        <View style={styles.badgeCount}><Text style={styles.badgeText}>{orderStatus.delivered}</Text></View>
+                    </View>
+                    <Text style={styles.statusLabel}>Đánh giá</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.statusItem}>
+                    <View style={styles.statusIconBadge}>
+                         {/* Icon trả hàng/hủy */}
+                        <HelpCircle size={24} color={AppColors.primary} />
+                    </View>
+                    <Text style={styles.statusLabel}>Đổi trả</Text>
+                </TouchableOpacity>
+            </View>
         </View>
+
+        {/* --- VÍ & TIỆN ÍCH --- */}
+        <View style={styles.sectionCard}>
+            <View style={styles.gridMenu}>
+                <TouchableOpacity style={styles.gridItem}>
+                    <Wallet size={26} color="#FF9F43" />
+                    <Text style={styles.gridLabel}>Ví tiền</Text>
+                </TouchableOpacity>
+                 <TouchableOpacity style={styles.gridItem}>
+                    <Ticket size={26} color="#EE5A24" />
+                    <Text style={styles.gridLabel}>Vouchers</Text>
+                </TouchableOpacity>
+                 <TouchableOpacity style={styles.gridItem}>
+                    <Heart size={26} color="#FF6B6B" />
+                    <Text style={styles.gridLabel}>Yêu thích</Text>
+                </TouchableOpacity>
+                 <TouchableOpacity style={styles.gridItem}>
+                    <MapPin size={26} color="#2e86de" />
+                    <Text style={styles.gridLabel}>Địa chỉ</Text>
+                </TouchableOpacity>
+            </View>
+        </View>
+
+        {/* --- CÀI ĐẶT TÀI KHOẢN --- */}
+        <Text style={styles.groupTitle}>Tài khoản</Text>
+        <View style={styles.menuGroup}>
+            <MenuItem icon={User} title="Hồ sơ cá nhân" color={AppColors.primary} onPress={() => router.push('/user/edit-profile')} />
+            <MenuItem icon={CreditCard} title="Thẻ & Ngân hàng" color="#10ac84" onPress={() => router.push('/user/payment')} />
+            <MenuItem icon={MapPin} title="Sổ địa chỉ" color="#f368e0" onPress={() => router.push('/user/address')} isLast />
+        </View>
+
+        {/* --- CÀI ĐẶT ỨNG DỤNG --- */}
+        <Text style={styles.groupTitle}>Cài đặt & Hỗ trợ</Text>
+        <View style={styles.menuGroup}>
+            <MenuItem icon={Globe} title="Ngôn ngữ" value="Tiếng Việt" color="#54a0ff" />
+            <MenuItem icon={Moon} title="Giao diện tối" value="Tắt" color="#5f27cd" />
+            <MenuItem icon={ShieldCheck} title="Chính sách bảo mật" color="#222f3e" />
+            <MenuItem icon={HelpCircle} title="Trung tâm trợ giúp" color="#ff9f43" isLast />
+        </View>
+
+        {/* --- LOGOUT --- */}
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+            <LogOut size={20} color="#FF3B30" />
+            <Text style={styles.logoutText}>Đăng xuất</Text>
+        </TouchableOpacity>
+
+        <Text style={styles.versionText}>Phiên bản 1.0.0</Text>
+        <View style={{height: 40}} />
       </View>
-
-      {/* Account Management */}
-      <View style={styles.sectionContainer}>
-        <Text style={styles.sectionTitle}>Quản lý tài khoản</Text>
-        {[
-          { title: 'Chỉnh sửa hồ sơ', icon: '👤', route: '/user/edit-profile' },
-          { title: 'Đổi mật khẩu', icon: '🔐', route: '/user/address' },
-          { title: 'Địa chỉ giao hàng', icon: '📍', route: '/user/address' },
-          { title: 'Phương thức thanh toán', icon: '💳', route: '/user/payment' },
-        ].map((item, idx) => (
-          <TouchableOpacity
-            key={idx}
-            onPress={() => router.push(item.route as any)}
-            style={styles.menuItem}
-          >
-            <Text style={styles.menuIcon}>{item.icon}</Text>
-            <Text style={styles.menuTitle}>{item.title}</Text>
-            <ChevronRight size={20} color="#999" />
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {/* Shopping Activity */}
-      <View style={styles.sectionContainer}>
-        <Text style={styles.sectionTitle}>Hoạt động mua sắm</Text>
-        {[
-          { title: 'Lịch sử đơn hàng', icon: '📋', route: '/user/order-history' },
-          { title: 'Đánh giá của tôi', icon: '⭐', route: '/user/address' },
-          { title: 'Sản phẩm xem gần đây', icon: '👀', route: '/user/address' },
-        ].map((item, idx) => (
-          <TouchableOpacity
-            key={idx}
-            onPress={() => router.push(item.route as any)}
-            style={styles.menuItem}
-          >
-            <Text style={styles.menuIcon}>{item.icon}</Text>
-            <Text style={styles.menuTitle}>{item.title}</Text>
-            <ChevronRight size={20} color="#999" />
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {/* Support */}
-      <View style={styles.sectionContainer}>
-        <Text style={styles.sectionTitle}>Hỗ trợ</Text>
-        {[
-          { title: 'Trung tâm trợ giúp', icon: '❓', route: '/user/address' },
-          { title: 'Câu hỏi thường gặp', icon: '❔', route: '/user/address' },
-          { title: 'Chính sách hoàn trả', icon: '🔄', route: '/user/address' },
-          { title: 'Điều khoản dịch vụ', icon: '📄', route: '/user/address' },
-        ].map((item, idx) => (
-          <TouchableOpacity
-            key={idx}
-            onPress={() => router.push(item.route as any)}
-            style={styles.menuItem}
-          >
-            <Text style={styles.menuIcon}>{item.icon}</Text>
-            <Text style={styles.menuTitle}>{item.title}</Text>
-            <ChevronRight size={20} color="#999" />
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {/* App Settings */}
-      <View style={styles.sectionContainer}>
-        <Text style={styles.sectionTitle}>Cài đặt ứng dụng</Text>
-        {[
-          { title: 'Ngôn ngữ', icon: '🌐', route: '/user/address', value: 'Tiếng Việt' },
-          { title: 'Chế độ tối', icon: '🌙', route: '/user/address', value: 'Tắt' },
-          { title: 'Phiên bản', icon: 'ℹ️', route: '/user/address', value: 'v1.0.0' },
-          { title: 'Gửi phản hồi', icon: '📧', route: '/user/address' },
-        ].map((item, idx) => (
-          <TouchableOpacity
-            key={idx}
-            onPress={() => router.push(item.route as any)}
-            style={styles.menuItem}
-          >
-            <Text style={styles.menuIcon}>{item.icon}</Text>
-            <Text style={styles.menuTitle}>{item.title}</Text>
-            {item.value && <Text style={styles.menuValue}>{item.value}</Text>}
-            {!item.value && <ChevronRight size={20} color="#999" />}
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {/* Logout Button */}
-      <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
-        <Text style={styles.logoutButtonText}>Đăng xuất</Text>
-      </TouchableOpacity>
-
-      <View style={{ height: 20 }} />
     </ScrollView>
   );
 }
@@ -259,207 +221,258 @@ export default function UserProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#F2F2F7', // Màu nền kiểu iOS Grouped
   },
-  header: {
-    paddingTop: 15,
-    paddingBottom: 20,
-    paddingHorizontal: 16,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
+  // --- HEADER ---
+  headerContainer: {
+    marginBottom: 10,
   },
-  headerContent: {
-    gap: 10,
+  headerGradient: {
+    paddingTop: 60,
+    paddingBottom: 30,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
   },
-  headerIcons: {
+  topBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 20,
   },
   headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: 'white',
+    fontSize: 28,
+    fontFamily: Fonts.rounded,
+    fontWeight: '700',
+    color: '#FFF',
   },
-  userInfoCard: {
+  topBarIcons: {
+    flexDirection: 'row',
+    gap: 15,
+  },
+  iconBtn: {
+    padding: 5,
+  },
+  userInfoBlock: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 16,
-    marginHorizontal: 16,
-    marginTop: -30,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
   },
-  avatarSection: {
-    marginRight: 16,
-  },
-  avatarWrapper: {
+  avatarContainer: {
     position: 'relative',
+    marginRight: 15,
   },
   avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: AppColors.primary,
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#FFF',
   },
   avatarText: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: 'white',
+    color: '#FFF',
   },
-  editBadge: {
+  editAvatarBadge: {
     position: 'absolute',
     bottom: 0,
     right: 0,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#FFD700',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    padding: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#FFF',
   },
-  userDetails: {
+  userTextView: {
     flex: 1,
   },
-  fullName: {
-    fontSize: 16,
+  userName: {
+    fontSize: 20,
     fontWeight: 'bold',
+    color: '#FFF',
     marginBottom: 4,
   },
-  email: {
-    fontSize: 12,
-    color: '#999',
+  userEmail: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.8)',
     marginBottom: 8,
   },
-  membershipBadge: {
-    paddingHorizontal: 8,
+  pointBadge: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
     alignSelf: 'flex-start',
   },
-  membershipText: {
-    fontSize: 11,
-    fontWeight: 'bold',
-    color: 'white',
+  pointText: {
+    color: '#FFD700',
+    fontWeight: '700',
+    fontSize: 12,
   },
-  quickActionsContainer: {
+
+  // --- BODY ---
+  bodyContainer: {
     paddingHorizontal: 16,
-    marginBottom: 16,
+    marginTop: -20, // Kéo lên đè lên header
   },
-  quickActionsGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  quickActionBtn: {
-    flex: 1,
-    borderRadius: 12,
-    paddingVertical: 12,
-    alignItems: 'center',
-    gap: 8,
+  sectionCard: {
+    backgroundColor: '#FFF',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  quickActionIcon: {
-    fontSize: 24,
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
   },
-  quickActionLabel: {
-    fontSize: 12,
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1C1C1E',
+  },
+  seeAllText: {
+    fontSize: 13,
+    color: AppColors.primary,
     fontWeight: '600',
-    color: 'white',
   },
-  sectionContainer: {
-    backgroundColor: 'white',
-    marginHorizontal: 16,
-    marginBottom: 12,
+  
+  // Order Status
+  orderStatusRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  statusItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  statusIconBadge: {
+    position: 'relative',
+    marginBottom: 8,
+    padding: 10,
+    backgroundColor: '#F8F9FA',
     borderRadius: 12,
-    paddingVertical: 12,
+  },
+  badgeCount: {
+    position: 'absolute',
+    top: -5,
+    right: -5,
+    backgroundColor: '#FF3B30',
+    borderRadius: 10,
+    minWidth: 18,
+    height: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: '#FFF',
+  },
+  badgeText: {
+    color: '#FFF',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  statusLabel: {
+    fontSize: 12,
+    color: '#636e72',
+    textAlign: 'center',
+  },
+
+  // Grid Menu
+  gridMenu: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  gridItem: {
+    alignItems: 'center',
+    flex: 1,
+    gap: 8,
+  },
+  gridLabel: {
+    fontSize: 12,
+    color: '#333',
+    fontWeight: '500',
+  },
+
+  // --- MENU GROUP ---
+  groupTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#8E8E93',
+    marginBottom: 8,
+    marginLeft: 4,
+  },
+  menuGroup: {
+    backgroundColor: '#FFF',
+    borderRadius: 16,
     paddingHorizontal: 16,
+    marginBottom: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
-    elevation: 1,
-  },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    marginBottom: 12,
-    color: '#333',
-  },
-  statusGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 8,
-  },
-  statusBox: {
-    flex: 1,
-    borderRadius: 8,
-    paddingVertical: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  statusCount: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: 'white',
-  },
-  statusLabel: {
-    fontSize: 10,
-    color: 'white',
-    marginTop: 4,
+    elevation: 2,
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-    gap: 12,
+    borderBottomColor: '#F2F2F7',
   },
-  menuIcon: {
-    fontSize: 20,
-    width: 28,
+  menuItemNoBorder: {
+    borderBottomWidth: 0,
+  },
+  menuIconBox: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
   },
   menuTitle: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 15,
+    color: '#1C1C1E',
     fontWeight: '500',
-    color: '#333',
   },
   menuValue: {
-    fontSize: 12,
-    color: '#999',
+    fontSize: 14,
+    color: '#8E8E93',
+    marginRight: 6,
   },
+
+  // --- FOOTER ---
   logoutButton: {
-    marginHorizontal: 16,
-    marginBottom: 16,
-    backgroundColor: AppColors.primary,
-    borderRadius: 12,
-    paddingVertical: 12,
+    flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
+    justifyContent: 'center',
+    backgroundColor: '#FFF',
+    borderRadius: 16,
+    paddingVertical: 14,
+    marginBottom: 20,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: '#FF3B30',
   },
-  logoutButtonText: {
+  logoutText: {
+    color: '#FF3B30',
     fontSize: 16,
-    fontWeight: 'bold',
-    color: 'white',
+    fontWeight: '600',
+  },
+  versionText: {
+    textAlign: 'center',
+    color: '#C7C7CC',
+    fontSize: 12,
+    marginBottom: 10,
   },
 });
-
-

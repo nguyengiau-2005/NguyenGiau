@@ -3,138 +3,62 @@ import { useAuth } from '@/contexts/Auth';
 import { useCart } from '@/contexts/CartContext';
 import { useOrders } from '@/contexts/OrdersContext';
 import useDeviceLocation from '@/hooks/useDeviceLocation';
+import { formatCurrencyFull } from '@/utils/format';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { ChevronLeft, MapPin, ShoppingBag } from 'lucide-react-native';
+import { ChevronLeft, CreditCard, MapPin, ShieldCheck, Truck } from 'lucide-react-native';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  FlatList,
   Image,
   Modal,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
-
-interface VoucherOption {
-  code: string;
-  discount: number;
-  type: 'percent' | 'fixed';
-  description?: string;
-}
-
-interface ShippingMethod {
-  id: string;
-  name: string;
-  estimatedDate: string;
-  cost: number;
-  freeAt?: number;
-}
 
 export default function CheckoutScreen() {
   const router = useRouter();
   const { selectedCheckoutItems, clearCart } = useCart();
   const auth = useAuth();
   const { addOrder } = useOrders();
-  
-  // Nếu không có items từ cart, hiển thị empty state
-  const cartItems = selectedCheckoutItems.length > 0 ? selectedCheckoutItems : [];
-
-  const [shippingAddress, setShippingAddress] = useState({
-    name: 'Nguyễn Giao',
-    phone: '+84 123 456 789',
-    address: '123 Đường Lê Lợi, Quận 1, TP.HCM',
-  });
-
   const { address: detectedAddress, loading: locationLoading, fetchLocation } = useDeviceLocation();
 
-  const [shippingMethod, setShippingMethod] = useState('standard');
+  const cartItems = selectedCheckoutItems || [];
+
+  // --- STATE QUẢN LÝ ---
+  const [shippingMethod, setShippingMethod] = useState<'standard' | 'express'>('standard');
   const [paymentMethod, setPaymentMethod] = useState('cod');
-  const [selectedVoucher, setSelectedVoucher] = useState<VoucherOption | null>(null);
-  const [selectedShippingVoucher, setSelectedShippingVoucher] = useState<VoucherOption | null>(null);
-  const [usePoints, setUsePoints] = useState(false);
-  const [notes, setNotes] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [showVoucherModal, setShowVoucherModal] = useState(false);
-  const [showShippingVoucherModal, setShowShippingVoucherModal] = useState(false);
   const [showBankModal, setShowBankModal] = useState(false);
-  const [bankPaymentRef, setBankPaymentRef] = useState<string | null>(null);
+  const [shippingAddress] = useState({
+    name: auth.user?.full_name || 'Khách hàng',
+    phone: auth.user?.phone || 'Chưa cập nhật',
+    address: 'Vui lòng chọn địa chỉ giao hàng',
+  });
 
-  const vouchers: VoucherOption[] = [
-    { code: 'SAVE50K', discount: 50000, type: 'fixed', description: 'Giảm 50.000đ' },
-    { code: 'SAVE30PERCENT', discount: 30, type: 'percent', description: 'Giảm 30%' },
-    { code: 'NEWUSER', discount: 100000, type: 'fixed', description: 'Giảm 100.000đ (Người dùng mới)' },
-  ];
+  // --- LOGIC TÍNH TOÁN TRỰC TIẾP ---
+  // 1. Tổng tiền hàng (Ép kiểu Number để tính toán chính xác)
+  const subtotal = cartItems.reduce((sum, item) => sum + (Number(item.price) * item.qty), 0);
 
-  const shippingVouchers: VoucherOption[] = [
-    { code: 'FREESHIP', discount: 100, type: 'percent', description: 'Miễn phí vận chuyển' },
-    { code: 'SHIP10', discount: 10000, type: 'fixed', description: 'Giảm 10.000đ phí ship' },
-  ];
+  // 2. Phí vận chuyển: Miễn phí nếu đơn hàng từ 500k trở lên
+  const SHIPPING_PRICE = { standard: 15.000, express: 30.000 };
+  const shippingCost = (subtotal >= 500000 || subtotal === 0) ? 0 : SHIPPING_PRICE[shippingMethod];
 
-  const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.qty, 0);
-  const shippingCost = subtotal > 500000 ? 0 : (shippingMethod === 'standard' ? 15000 : 30000);
-  const voucherDiscount = selectedVoucher
-    ? selectedVoucher.type === 'fixed'
-      ? selectedVoucher.discount
-      : (subtotal * selectedVoucher.discount) / 100
-    : 0;
-  const shippingVoucherDiscount = selectedShippingVoucher
-    ? selectedShippingVoucher.type === 'fixed'
-      ? Math.min(selectedShippingVoucher.discount, shippingCost)
-      : (shippingCost * selectedShippingVoucher.discount) / 100
-    : 0;
-  const pointsDiscount = usePoints ? 20000 : 0;
-  const finalShippingCost = Math.max(0, shippingCost - shippingVoucherDiscount);
-  const total = Math.max(0, subtotal + finalShippingCost - voucherDiscount - pointsDiscount);
-  const savedAmount = voucherDiscount + shippingVoucherDiscount + pointsDiscount;
-
-  if (cartItems.length === 0) {
-    return (
-      <View style={styles.container}>
-        <LinearGradient colors={[AppColors.primary, AppColors.primaryLight]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.header}>
-          <View style={styles.headerContent}>
-            <TouchableOpacity onPress={() => router.back()}>
-              <ChevronLeft size={24} color="white" />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>Thanh toán</Text>
-            <View style={{ width: 24 }} />
-          </View>
-        </LinearGradient>
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>🛒</Text>
-          <Text style={styles.emptyTitle}>Giỏ hàng trống</Text>
-          <TouchableOpacity
-            onPress={() => router.push('/(tabs)' as any)}
-            style={styles.continueShoppingBtn}
-          >
-            <Text style={styles.continueShoppingText}>Tiếp tục mua sắm</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
-  }
+  // 3. Tổng thanh toán cuối cùng
+  const totalPayment = subtotal + shippingCost;
 
   const handlePlaceOrder = () => {
-    // Require login before placing an order
     if (!auth.isLoggedIn) {
-      Alert.alert('Yêu cầu đăng nhập', 'Bạn cần đăng nhập để đặt hàng', [
-        { text: 'Hủy', style: 'cancel' },
-        { text: 'Đăng nhập', onPress: () => router.push('/auth/login' as any) },
-      ]);
+      Alert.alert('Yêu cầu', 'Vui lòng đăng nhập để thanh toán');
       return;
     }
 
-    // If payment method is bank transfer, show QR modal instead of directly placing
     if (paymentMethod === 'bank') {
-      // generate a payment reference for this bank transfer session
-      const ref = Date.now().toString();
-      setBankPaymentRef(ref);
       setShowBankModal(true);
       return;
     }
@@ -142,479 +66,150 @@ export default function CheckoutScreen() {
     setIsLoading(true);
     setTimeout(() => {
       setIsLoading(false);
-      addOrder(cartItems, 'Pending', undefined, {
-        total,
-        subtotal,
-        shippingCost: finalShippingCost,
-        shippingAddress,
-        shippingMethod,
-        paymentMethod,
-        notes,
-        voucherCode: selectedVoucher?.code,
-        voucherDiscount,
-      });
+      addOrder(cartItems, 'Pending', undefined, { total: totalPayment, subtotal, shippingCost, paymentMethod });
       clearCart();
-      Alert.alert('Thành công', 'Đơn hàng đã được đặt', [
-        {
-          text: 'Xem lịch sử',
-          onPress: () => router.push('/user/order-history' as any),
-        },
-        {
-          text: 'Về trang chủ',
-          onPress: () => router.push('/(tabs)' as any),
-        },
-      ]);
+      router.push('/user/order-history' as any);
     }, 1500);
-  };
-
-  const verifyBankPayment = () => {
-    // Simulate verifying the bank transfer after scanning QR / user confirms
-    setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      setShowBankModal(false);
-      addOrder(cartItems, 'Paid', bankPaymentRef ?? undefined, {
-        total,
-        subtotal,
-        shippingCost: finalShippingCost,
-        shippingAddress,
-        shippingMethod,
-        paymentMethod,
-        notes,
-        voucherCode: selectedVoucher?.code,
-        voucherDiscount,
-      });
-      setBankPaymentRef(null);
-      clearCart();
-      Alert.alert('Thanh toán thành công', 'Chúng tôi đã nhận được chuyển khoản của bạn', [
-        { text: 'Xem lịch sử', onPress: () => router.push('/user/order-history' as any) },
-      ]);
-    }, 1800);
   };
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <LinearGradient colors={[AppColors.primary, AppColors.primaryLight]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.header}>
-        <View style={styles.headerContent}>
-          <TouchableOpacity onPress={() => router.back()}>
-            <ChevronLeft size={24} color="white" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Thanh toán</Text>
-          <TouchableOpacity onPress={() => router.push('/(tabs)' as any)}>
-            <ShoppingBag size={24} color="white" />
-          </TouchableOpacity>
-        </View>
+      {/* ====== HEADER ====== */}
+      <LinearGradient colors={[AppColors.primary, AppColors.primaryLight]} style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <ChevronLeft size={24} color="#fff" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Xác nhận thanh toán</Text>
+        <View style={{ width: 40 }} />
       </LinearGradient>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Shipping Address Section */}
-        <View style={styles.section}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+
+        {/* ĐỊA CHỈ GIAO HÀNG */}
+        <View style={styles.sectionCard}>
           <View style={styles.sectionHeader}>
             <MapPin size={18} color={AppColors.primary} />
-            <Text style={styles.sectionTitle}>Địa chỉ giao hàng</Text>
+            <Text style={styles.sectionTitle}>Địa chỉ nhận hàng</Text>
           </View>
-          {shippingAddress ? (
-            <>
-              <View style={styles.addressBox}>
-                <Text style={styles.addressName}>{shippingAddress.name}</Text>
-                <Text style={styles.addressPhone}>{shippingAddress.phone}</Text>
-                <Text style={styles.addressText}>{shippingAddress.address}</Text>
-                {detectedAddress && detectedAddress !== shippingAddress.address && (
-                  <TouchableOpacity onPress={() => setShippingAddress(s => ({ ...s, address: detectedAddress }))} style={{ marginTop: 8 }}>
-                    <Text style={{ color: AppColors.primary }}>Sử dụng địa chỉ hiện tại: {locationLoading ? '...' : detectedAddress}</Text>
-                  </TouchableOpacity>
-                )}
-                <TouchableOpacity
-                  onPress={() => router.push('/user/address' as any)}
-                  style={styles.changeButton}
-                >
-                  <Text style={styles.changeButtonText}>Thay đổi</Text>
-                </TouchableOpacity>
-              </View>
-            </>
-          ) : (
-            <TouchableOpacity
-              onPress={() => router.push('/user/address' as any)}
-              style={styles.addAddressButton}
-            >
-              <Text style={styles.addAddressIcon}>➕</Text>
-              <Text style={styles.addAddressText}>Thêm địa chỉ giao hàng</Text>
+          <View style={styles.addressBody}>
+            <Text style={styles.addressMainText}>{shippingAddress.name} | {shippingAddress.phone}</Text>
+            <Text style={styles.addressSubText}>{detectedAddress || shippingAddress.address}</Text>
+            <TouchableOpacity onPress={fetchLocation} style={styles.locationTag}>
+              <Text style={styles.locationTagText}>
+                {locationLoading ? 'Đang định vị...' : '📌 Sử dụng vị trí hiện tại'}
+              </Text>
             </TouchableOpacity>
-          )}
-        </View>
-
-        {/* Shipping Method Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Phương thức vận chuyển</Text>
-          {[
-            {
-              id: 'standard',
-              name: 'Giao hàng tiêu chuẩn',
-              cost: subtotal > 500000 ? 'MIỄN PHÍ' : '15.000đ',
-              time: '3-5 ngày',
-            },
-            {
-              id: 'express',
-              name: 'Giao hàng nhanh',
-              cost: '30.000đ',
-              time: '1-2 ngày',
-            },
-          ].map((method) => (
-            <TouchableOpacity
-              key={method.id}
-              onPress={() => setShippingMethod(method.id)}
-              style={[styles.radioOption, shippingMethod === method.id && styles.radioOptionSelected]}
-            >
-              <View
-                style={[
-                  styles.radioButton,
-                  shippingMethod === method.id && styles.radioButtonSelected,
-                ]}
-              >
-                {shippingMethod === method.id && <View style={styles.radioButtonInner} />}
-              </View>
-              <View style={styles.optionContent}>
-                <Text style={styles.optionName}>{method.name}</Text>
-                <Text style={styles.optionTime}>{method.time}</Text>
-              </View>
-              <Text style={styles.optionPrice}>{method.cost}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {/* Payment Method Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Phương thức thanh toán</Text>
-          {[
-            { id: 'cod', name: 'Thanh toán khi nhận hàng', icon: '💵' },
-            { id: 'wallet', name: 'Ví điện tử', icon: '👛' },
-            { id: 'bank', name: 'Chuyển khoản ngân hàng', icon: '🏦' },
-            { id: 'points', name: 'Dùng điểm thưởng', icon: '⭐' },
-          ].map((method) => (
-            <TouchableOpacity
-              key={method.id}
-              onPress={() => setPaymentMethod(method.id)}
-              style={[styles.radioOption, paymentMethod === method.id && styles.radioOptionSelected]}
-            >
-              <View
-                style={[
-                  styles.radioButton,
-                  paymentMethod === method.id && styles.radioButtonSelected,
-                ]}
-              >
-                {paymentMethod === method.id && <View style={styles.radioButtonInner} />}
-              </View>
-              <Text style={styles.optionIcon}>{method.icon}</Text>
-              <Text style={styles.optionName}>{method.name}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {/* Order Items Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Sản phẩm ({cartItems.length})</Text>
-          {cartItems.map((item) => (
-            <View key={item.id} style={styles.itemCard}>
-              <View style={styles.itemImage}>
-                {item.img ? (
-                  <Image
-                    source={typeof item.img === 'string' ? { uri: item.img } : item.img}
-                    style={{ width: '100%', height: '100%', borderRadius: 8 }}
-                    resizeMode="cover"
-                  />
-                ) : (
-                  <Text style={styles.itemImageText}>📦</Text>
-                )}
-              </View>
-              <View style={styles.itemDetails}>
-                <Text style={styles.itemName} numberOfLines={2}>
-                  {item.name}
-                </Text>
-                <Text style={styles.itemQuantity}>x{item.qty}</Text>
-              </View>
-              <Text style={styles.itemPrice}>{(item.price * item.qty).toLocaleString()}đ</Text>
-            </View>
-          ))}
-        </View>
-
-        {/* Item Summary Box */}
-        <View style={styles.section}>
-          <View style={styles.summaryBox}>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Tạm tính:</Text>
-              <Text style={styles.summaryValue}>{subtotal.toLocaleString()}đ</Text>
-            </View>
-            {voucherDiscount > 0 && (
-              <View style={styles.summaryRow}>
-                <Text style={styles.summaryLabel}>Giảm giá ({selectedVoucher?.code}):</Text>
-                <Text style={[styles.summaryValue, { color: AppColors.primary }]}>
-                  -{voucherDiscount.toLocaleString()}đ
-                </Text>
-              </View>
-            )}
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Vận chuyển:</Text>
-              <Text style={styles.summaryValue}>{shippingCost.toLocaleString()}đ</Text>
-            </View>
-            {shippingVoucherDiscount > 0 && (
-              <View style={styles.summaryRow}>
-                <Text style={styles.summaryLabel}>Giảm ship ({selectedShippingVoucher?.code}):</Text>
-                <Text style={[styles.summaryValue, { color: AppColors.primary }]}>
-                  -{shippingVoucherDiscount.toLocaleString()}đ
-                </Text>
-              </View>
-            )}
-            {usePoints && (
-              <View style={styles.summaryRow}>
-                <Text style={styles.summaryLabel}>Dùng điểm:</Text>
-                <Text style={[styles.summaryValue, { color: AppColors.primary }]}>
-                  -{pointsDiscount.toLocaleString()}đ
-                </Text>
-              </View>
-            )}
-            <View style={styles.divider} />
-            <View style={styles.summaryRow}>
-              <Text style={styles.totalLabel}>Tổng thanh toán:</Text>
-              <Text style={styles.totalPrice}>{total.toLocaleString()}đ</Text>
-            </View>
           </View>
         </View>
 
-        {/* Voucher Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Mã giảm giá</Text>
-          <TouchableOpacity
-            onPress={() => setShowVoucherModal(true)}
-            style={styles.voucherButton}
-          >
-            <Text style={styles.voucherIcon}>🎟️</Text>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.voucherLabel}>
-                {selectedVoucher ? selectedVoucher.code : 'Chọn voucher'}
-              </Text>
-              {selectedVoucher && (
-                <Text style={styles.voucherDiscount}>
-                  Tiết kiệm {voucherDiscount.toLocaleString()}đ
-                </Text>
-              )}
-            </View>
-            <Text>›</Text>
-          </TouchableOpacity>
-        </View>
+        {/* PHƯƠNG THỨC VẬN CHUYỂN */}
+        <View style={styles.sectionCard}>
+          <View style={styles.sectionHeader}>
+            <Truck size={18} color={AppColors.primary} />
+            <Text style={styles.sectionTitle}>Đơn vị vận chuyển</Text>
+          </View>
 
-        {/* Shipping Voucher Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Mã giảm giá vận chuyển</Text>
-          <TouchableOpacity
-            onPress={() => setShowShippingVoucherModal(true)}
-            style={styles.voucherButton}
-          >
-            <Text style={styles.voucherIcon}>🚚</Text>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.voucherLabel}>
-                {selectedShippingVoucher ? selectedShippingVoucher.code : 'Chọn mã freeship'}
-              </Text>
-              {selectedShippingVoucher && (
-                <Text style={styles.voucherDiscount}>
-                  Tiết kiệm {shippingVoucherDiscount.toLocaleString()}đ
-                </Text>
-              )}
-            </View>
-            <Text>›</Text>
-          </TouchableOpacity>
-          {shippingVoucherDiscount > 0 && (
-            <View style={styles.savingsBadge}>
-              <Text style={styles.savingsText}>✓ Đã tiết kiệm {shippingVoucherDiscount.toLocaleString()}đ</Text>
-            </View>
-          )}
-        </View>
-
-        {/* Points Usage Section */}
-        <View style={styles.section}>
-          <TouchableOpacity
-            onPress={() => setUsePoints(!usePoints)}
-            style={styles.pointsOption}
-            activeOpacity={0.8}
-          >
-            <View style={[styles.checkbox, usePoints && styles.checkboxChecked]}>
-              {usePoints && <Text style={styles.checkmark}>✓</Text>}
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.pointsLabel}>Dùng 200 điểm = 20.000đ</Text>
-              <Text style={styles.pointsBalance}>Số dư: 2.500 điểm</Text>
-            </View>
-            <Text style={{ color: '#999' }}>{usePoints ? 'Đã chọn' : 'Chọn'}</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Notes Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Ghi chú cho người bán</Text>
-          <TextInput
-            style={styles.notesInput}
-            placeholder="Thêm ghi chú (tùy chọn)..."
-            placeholderTextColor="#ccc"
-            value={notes}
-            onChangeText={setNotes}
-            multiline
-            numberOfLines={4}
+          <ShippingOption
+            id="standard"
+            title="Tiêu chuẩn"
+            desc="Nhận hàng sau 2-3 ngày"
+            price={subtotal >= 500000 ? 0 : SHIPPING_PRICE.standard}
+            active={shippingMethod}
+            setter={setShippingMethod}
           />
-          <Text style={styles.notesHelper}>
-            Ghi chú sẽ được gửi đến người bán hàng để cải thiện trải nghiệm mua sắm của bạn
-          </Text>
+          <View style={{ height: 10 }} />
+          <ShippingOption
+            id="express"
+            title="Hỏa tốc"
+            desc="Nhận hàng trong 24h"
+            price={subtotal >= 500000 ? 0 : SHIPPING_PRICE.express}
+            active={shippingMethod}
+            setter={setShippingMethod}
+          />
         </View>
 
-        {/* Final Summary */}
-        <View style={styles.finalSummary}>
-          <View style={styles.finalSummaryRow}>
-            <Text style={styles.finalLabel}>Tổng thanh toán</Text>
-            <Text style={styles.finalPrice}>{total.toLocaleString()}đ</Text>
+        {/* THANH TOÁN */}
+        <View style={styles.sectionCard}>
+          <View style={styles.sectionHeader}>
+            <CreditCard size={18} color={AppColors.primary} />
+            <Text style={styles.sectionTitle}>Phương thức thanh toán</Text>
           </View>
-          {savedAmount > 0 && (
-            <View style={styles.savingsInfo}>
-              <Text style={styles.savingsInfoText}>Bạn đã tiết kiệm {savedAmount.toLocaleString()}đ</Text>
-            </View>
-          )}
-          <Text style={styles.termsText}>Bằng việc đặt hàng bạn đồng ý với điều khoản của cửa hàng</Text>
+          <View style={styles.paymentRow}>
+            <PaymentOption id="cod" label="Tiền mặt" icon="💵" active={paymentMethod} setter={setPaymentMethod} />
+            <PaymentOption id="bank" label="Chuyển khoản" icon="🏦" active={paymentMethod} setter={setPaymentMethod} />
+            <PaymentOption id="wallet" label="Ví Fiora" icon="🌸" active={paymentMethod} setter={setPaymentMethod} />
+          </View>
         </View>
 
+        {/* DANH SÁCH SẢN PHẨM */}
+        <View style={styles.sectionCard}>
+          <Text style={styles.sectionTitleSmall}>Sản phẩm đã chọn</Text>
+          {cartItems.map((item, index) => (
+            <View key={item.id + index} style={styles.itemRow}>
+              <Image source={{ uri: typeof item.img === 'string' ? item.img : item.img?.[0]?.url }} style={styles.itemImg} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.itemName} numberOfLines={1}>{item.name}</Text>
+                <Text style={styles.itemQty}>Số lượng: {item.qty}</Text>
+              </View>
+              <Text style={styles.itemPrice}>{formatCurrencyFull(item.price * item.qty)}</Text>
+            </View>
+          ))}
+        </View>
+
+        {/* CHI TIẾT HÓA ĐƠN LUXE */}
+        <View style={styles.billCard}>
+          <View style={styles.billRow}>
+            <Text style={styles.billLabel}>Tổng tiền hàng</Text>
+            <Text style={styles.billValue}>{formatCurrencyFull(subtotal)}</Text>
+          </View>
+          <View style={styles.billRow}>
+            <Text style={styles.billLabel}>Phí vận chuyển</Text>
+            <Text style={styles.billValue}>
+              {shippingCost === 0 ? 'Miễn phí' : formatCurrencyFull(shippingCost)}
+            </Text>
+          </View>
+          <View style={styles.billDivider} />
+          <View style={styles.totalRow}>
+            <Text style={styles.totalLabel}>Tổng thanh toán</Text>
+            <Text style={styles.totalValue}>{formatCurrencyFull(totalPayment)}</Text>
+          </View>
+        </View>
+
+        <View style={styles.secureBadge}>
+          <ShieldCheck size={14} color="#666" />
+          <Text style={styles.secureText}>Thanh toán được bảo mật bởi Fiora Luxe</Text>
+        </View>
         <View style={{ height: 120 }} />
       </ScrollView>
 
-      {/* Fixed Bottom Checkout Bar */}
-      <View style={styles.bottomBar}>
+      {/* FOOTER FIXED */}
+      <View style={styles.footer}>
         <View>
-          <Text style={styles.bottomLabel}>Tổng</Text>
-          <Text style={styles.bottomPrice}>{total.toLocaleString()}đ</Text>
+          <Text style={styles.footerLabel}>Tổng cộng</Text>
+          <Text style={styles.footerPrice}>{formatCurrencyFull(totalPayment)}</Text>
         </View>
-        <TouchableOpacity onPress={handlePlaceOrder} disabled={isLoading} activeOpacity={0.9}>
-          <LinearGradient colors={[AppColors.primary, AppColors.primaryLight]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ borderRadius: 10 }}>
-            <View style={{ paddingVertical: 12, paddingHorizontal: 28, minWidth: 140, alignItems: 'center' }}>
-              {isLoading ? (
-                <ActivityIndicator size="small" color="white" />
-              ) : (
-                <Text style={[styles.checkoutButtonText, { fontWeight: '900' }]}>Đặt hàng</Text>
-              )}
-            </View>
-          </LinearGradient>
+        <TouchableOpacity style={styles.placeOrderBtn} onPress={handlePlaceOrder} disabled={isLoading}>
+          {isLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.placeOrderText}>Đặt hàng ngay</Text>}
         </TouchableOpacity>
       </View>
 
-      {/* Voucher Modal */}
-      <Modal visible={showVoucherModal} transparent={true} animationType="slide">
+      {/* MODAL NGÂN HÀNG */}
+      <Modal
+        visible={!!showBankModal} // Ép kiểu chắc chắn là boolean
+        animationType="fade"
+        transparent
+      >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Chọn voucher</Text>
-              <TouchableOpacity onPress={() => setShowVoucherModal(false)}>
-                <Text style={styles.modalClose}>✕</Text>
-              </TouchableOpacity>
+          <View style={styles.bankCard}>
+            <Text style={styles.bankTitle}>Quét mã VietQR</Text>
+            <View style={styles.qrContainer}>
+              <QRCode value={`QR_PAYMENT_${totalPayment}`} size={200} color={AppColors.primary} />
             </View>
-            <FlatList
-              data={vouchers}
-              keyExtractor={(item) => item.code}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  onPress={() => {
-                    setSelectedVoucher(item);
-                    setShowVoucherModal(false);
-                  }}
-                  style={styles.voucherItem}
-                >
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.voucherItemCode}>{item.code}</Text>
-                    {item.description && (
-                      <Text style={styles.voucherItemDescription}>{item.description}</Text>
-                    )}
-                  </View>
-                  <Text style={styles.voucherItemDiscount}>
-                    {item.type === 'fixed'
-                      ? `-${item.discount.toLocaleString()}đ`
-                      : `-${item.discount}%`}
-                  </Text>
-                </TouchableOpacity>
-              )}
-            />
-          </View>
-        </View>
-      </Modal>
-
-      {/* Shipping Voucher Modal */}
-      <Modal visible={showShippingVoucherModal} transparent={true} animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Chọn mã freeship</Text>
-              <TouchableOpacity onPress={() => setShowShippingVoucherModal(false)}>
-                <Text style={styles.modalClose}>✕</Text>
-              </TouchableOpacity>
-            </View>
-            <FlatList
-              data={shippingVouchers}
-              keyExtractor={(item) => item.code}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  onPress={() => {
-                    setSelectedShippingVoucher(item);
-                    setShowShippingVoucherModal(false);
-                  }}
-                  style={styles.voucherItem}
-                >
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.voucherItemCode}>{item.code}</Text>
-                    {item.description && (
-                      <Text style={styles.voucherItemDescription}>{item.description}</Text>
-                    )}
-                  </View>
-                  <Text style={styles.voucherItemDiscount}>
-                    {item.type === 'fixed'
-                      ? `-${item.discount.toLocaleString()}đ`
-                      : `Miễn phí`}
-                  </Text>
-                </TouchableOpacity>
-              )}
-            />
-          </View>
-        </View>
-      </Modal>
-
-      {/* Bank Transfer Modal (QR) */}
-      <Modal visible={showBankModal} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { paddingBottom: 24 }]}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Chuyển khoản ngân hàng</Text>
-              <TouchableOpacity onPress={() => setShowBankModal(false)}>
-                <Text style={styles.modalClose}>✕</Text>
-              </TouchableOpacity>
-            </View>
-            <View style={{ padding: 20, alignItems: 'center' }}>
-              {bankPaymentRef ? (
-                <QRCode
-                  value={JSON.stringify({
-                    ref: bankPaymentRef,
-                    amount: total,
-                    account: '0123456789',
-                    bank: 'NGUYEN GIAU BANK',
-                    beneficiary: 'NguyenGiau Shop',
-                  })}
-                  size={220}
-                />
-              ) : (
-                <ActivityIndicator size="large" />
-              )}
-              <Text style={{ fontSize: 14, color: '#333', fontWeight: '600', marginBottom: 6 }}>Quét mã QR để chuyển khoản</Text>
-              <Text style={{ fontSize: 12, color: '#666', textAlign: 'center', marginBottom: 14 }}>Sử dụng ứng dụng ngân hàng của bạn để quét mã và chuyển tiền vào tài khoản cửa hàng.</Text>
-              <Text style={{ fontSize: 13, color: '#444', fontWeight: '700', marginBottom: 12 }}>Số tiền cần chuyển: {total.toLocaleString()}đ</Text>
-              <TouchableOpacity onPress={verifyBankPayment} style={[styles.checkoutButton, { minWidth: 180 }]} disabled={isLoading}>
-                {isLoading ? (
-                  <ActivityIndicator color="white" />
-                ) : (
-                  <Text style={styles.checkoutButtonText}>Tôi đã chuyển tiền</Text>
-                )}
-              </TouchableOpacity>
-            </View>
+            <Text style={styles.bankDetails}>Chủ TK: NGUYEN GIAO | STK: 0123456789</Text>
+            <Text style={styles.bankAmount}>Số tiền: {formatCurrencyFull(totalPayment)}</Text>
+            <TouchableOpacity style={styles.doneBtn} onPress={() => setShowBankModal(false)}>
+              <Text style={styles.doneBtnText}>Tôi đã chuyển tiền</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -622,493 +217,80 @@ export default function CheckoutScreen() {
   );
 }
 
+// --- SUB-COMPONENTS ---
+const ShippingOption = ({ id, title, desc, price, active, setter }: any) => (
+  <TouchableOpacity
+    style={[styles.selector, active === id && styles.selectorActive]}
+    onPress={() => setter(id)}
+  >
+    <View>
+      <Text style={styles.selectorName}>{title}</Text>
+      <Text style={styles.selectorDesc}>{desc}</Text>
+    </View>
+    <Text style={styles.selectorPrice}>{price === 0 ? 'Miễn phí' : formatCurrencyFull(price)}</Text>
+  </TouchableOpacity>
+);
+
+const PaymentOption = ({ id, label, icon, active, setter }: any) => (
+  <TouchableOpacity
+    style={[styles.payOpt, active === id && styles.payOptActive]}
+    onPress={() => setter(id)}
+  >
+    <Text style={{ fontSize: 22 }}>{icon}</Text>
+    <Text style={[styles.payOptText, active === id && { color: AppColors.primary }]}>{label}</Text>
+  </TouchableOpacity>
+);
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-  },
-  header: {
-    paddingTop: 15,
-    paddingBottom: 20,
-    paddingHorizontal: 16,
-  },
-  headerContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: 'white',
-  },
-  content: {
-    flex: 1,
-  },
-  section: {
-    backgroundColor: 'white',
-    marginHorizontal: 16,
-    marginVertical: 8,
-    borderRadius: 12,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 1,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-    gap: 8,
-  },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  addressBox: {
-    backgroundColor: '#f9f9f9',
-    borderRadius: 8,
-    padding: 12,
-    gap: 4,
-  },
-  addressName: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  addressPhone: {
-    fontSize: 12,
-    color: '#666',
-  },
-  addressText: {
-    fontSize: 12,
-    color: '#999',
-    marginBottom: 8,
-  },
-  changeButton: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    backgroundColor: AppColors.primary,
-    borderRadius: 6,
-    alignSelf: 'flex-start',
-  },
-  changeButtonText: {
-    color: 'white',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  addAddressButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    backgroundColor: '#ffe0e8',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: AppColors.primary,
-    borderStyle: 'dashed',
-  },
-  addAddressIcon: {
-    fontSize: 18,
-  },
-  addAddressText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: AppColors.primary,
-  },
-  radioOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    marginBottom: 8,
-    backgroundColor: '#f9f9f9',
-    gap: 12,
-  },
-  radioOptionSelected: {
-    backgroundColor: '#ffe0e8',
-  },
-  radioButton: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: '#ddd',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  radioButtonSelected: {
-    borderColor: AppColors.primary,
-  },
-  radioButtonInner: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: AppColors.primary,
-  },
-  optionContent: {
-    flex: 1,
-  },
-  optionIcon: {
-    fontSize: 18,
-  },
-  optionName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-  },
-  optionTime: {
-    fontSize: 11,
-    color: '#999',
-    marginTop: 2,
-  },
-  optionPrice: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: AppColors.primary,
-  },
-  itemCard: {
-    flexDirection: 'row',
-    gap: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    backgroundColor: '#f9f9f9',
-    borderRadius: 8,
-    marginBottom: 8,
-    alignItems: 'center',
-  },
-  itemImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 8,
-    backgroundColor: '#ffe0e8',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  itemImageText: {
-    fontSize: 24,
-  },
-  itemDetails: {
-    flex: 1,
-  },
-  itemName: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 4,
-  },
-  itemQuantity: {
-    fontSize: 11,
-    color: '#999',
-  },
-  itemPrice: {
-    fontSize: 12,
-    fontWeight: 'bold',
-    color: AppColors.primary,
-  },
-  summaryBox: {
-    backgroundColor: '#f9f9f9',
-    borderRadius: 8,
-    padding: 12,
-    gap: 8,
-  },
-  summaryRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  summaryLabel: {
-    fontSize: 12,
-    color: '#999',
-  },
-  summaryValue: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#333',
-  },
-  voucherButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    backgroundColor: '#f9f9f9',
-    borderRadius: 8,
-    gap: 12,
-  },
-  voucherIcon: {
-    fontSize: 20,
-  },
-  voucherLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-  },
-  voucherDiscount: {
-    fontSize: 11,
-    color: AppColors.primary,
-    marginTop: 2,
-  },
-  pointsOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    backgroundColor: '#f9f9f9',
-    borderRadius: 8,
-    gap: 12,
-  },
-  checkbox: {
-    width: 20,
-    height: 20,
-    borderRadius: 4,
-    borderWidth: 2,
-    borderColor: '#ddd',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  checkboxChecked: {
-    borderColor: AppColors.primary,
-    backgroundColor: AppColors.primary,
-  },
-  checkmark: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  pointsLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-  },
-  pointsBalance: {
-    fontSize: 11,
-    color: '#999',
-    marginTop: 2,
-  },
-  notesInput: {
-    backgroundColor: '#f9f9f9',
-    borderRadius: 8,
-    padding: 12,
-    minHeight: 80,
-    justifyContent: 'flex-start',
-    fontSize: 14,
-    color: '#333',
-    textAlignVertical: 'top',
-  },
-  notesHelper: {
-    fontSize: 11,
-    color: '#999',
-    marginTop: 8,
-    fontStyle: 'italic',
-  },
-  notesPlaceholder: {
-    fontSize: 12,
-    color: '#ccc',
-  },
-  finalSummary: {
-    marginHorizontal: 16,
-    marginVertical: 16,
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 1,
-  },
-  finalSummaryRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'baseline',
-    marginBottom: 12,
-  },
-  finalLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-  },
-  finalPrice: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: AppColors.primary,
-  },
-  termsText: {
-    fontSize: 11,
-    color: '#999',
-    textAlign: 'center',
-  },
-  termsLink: {
-    color: AppColors.primary,
-    fontWeight: '600',
-  },
-  bottomBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: 'white',
-    borderTopWidth: 1,
-    borderTopColor: '#f0f0f0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  bottomLabel: {
-    fontSize: 12,
-    color: '#999',
-    marginBottom: 4,
-  },
-  bottomPrice: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: AppColors.primary,
-  },
-  checkoutButton: {
-    backgroundColor: AppColors.primary,
-    borderRadius: 8,
-    paddingHorizontal: 32,
-    paddingVertical: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  checkoutButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  emptyText: {
-    fontSize: 60,
-    marginBottom: 16,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 24,
-  },
-  continueShoppingBtn: {
-    backgroundColor: AppColors.primary,
-    borderRadius: 8,
-    paddingHorizontal: 32,
-    paddingVertical: 12,
-  },
-  continueShoppingText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: 'white',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingTop: 16,
-    maxHeight: '80%',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  modalTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  modalClose: {
-    fontSize: 24,
-    color: '#999',
-  },
-  voucherItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  voucherItemCode: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: AppColors.primary,
-  },
-  voucherItemDescription: {
-    fontSize: 11,
-    color: '#999',
-    marginTop: 2,
-  },
-  voucherItemDiscount: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#e0e0e0',
-    marginVertical: 8,
-  },
-  totalLabel: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  totalPrice: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: AppColors.primary,
-  },
-  savingsBadge: {
-    marginTop: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    backgroundColor: '#f0f9f7',
-    borderRadius: 6,
-    borderLeftWidth: 3,
-    borderLeftColor: '#4CAF50',
-  },
-  savingsText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#4CAF50',
-  },
-  savingsInfo: {
-    marginVertical: 12,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    backgroundColor: '#f0f9f7',
-    borderRadius: 8,
-    borderLeftWidth: 3,
-    borderLeftColor: '#4CAF50',
-  },
-  savingsInfoText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#4CAF50',
-  },
+  container: { flex: 1, backgroundColor: '#F0F2F5' },
+  header: { paddingTop: 50, paddingBottom: 20, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', borderBottomLeftRadius: 30, borderBottomRightRadius: 30 },
+  headerTitle: { color: '#fff', fontSize: 18, fontWeight: '800', flex: 1, textAlign: 'center' },
+  backBtn: { width: 40, height: 40, borderRadius: 12, backgroundColor: 'rgba(255, 255, 255, 0.2)', justifyContent: 'center', alignItems: 'center' },
+  scrollContent: { padding: 16 },
+  sectionCard: { backgroundColor: '#fff', borderRadius: 20, padding: 16, marginBottom: 12, elevation: 2 },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 15 },
+  sectionTitle: { fontSize: 15, fontWeight: '700', color: '#333' },
+  addressBody: { borderLeftWidth: 3, borderLeftColor: AppColors.primary, paddingLeft: 12 },
+  addressMainText: { fontWeight: '700', fontSize: 14, color: '#333' },
+  addressSubText: { fontSize: 13, color: '#666', marginTop: 4 },
+  locationTag: { marginTop: 10, backgroundColor: '#FFF0F5', padding: 6, borderRadius: 8, alignSelf: 'flex-start' },
+  locationTagText: { fontSize: 11, color: AppColors.primary, fontWeight: '700' },
+  selector: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 15, borderRadius: 15, borderWidth: 1, borderColor: '#EEE' },
+  selectorActive: { borderColor: AppColors.primary, backgroundColor: '#FFF5F7' },
+  selectorName: { fontSize: 13, fontWeight: '700' },
+  selectorDesc: { fontSize: 11, color: '#999' },
+  selectorPrice: { fontWeight: '800', color: AppColors.primary },
+  paymentRow: { flexDirection: 'row', gap: 10 },
+  payOpt: { flex: 1, alignItems: 'center', padding: 12, borderRadius: 15, borderWidth: 1, borderColor: '#EEE', backgroundColor: '#FAFAFA' },
+  payOptActive: { borderColor: AppColors.primary, backgroundColor: '#FFF5F7' },
+  payOptText: { fontSize: 11, fontWeight: '700', marginTop: 6, color: '#666' },
+  sectionTitleSmall: { fontSize: 12, fontWeight: '700', color: '#888', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 15, borderBottomWidth: 1, borderBottomColor: '#F5F5F5', paddingBottom: 10 },
+  itemRow: { flexDirection: 'row', gap: 12, alignItems: 'center', marginBottom: 15 },
+  itemImg: { width: 55, height: 55, borderRadius: 12, backgroundColor: '#F8F8F8' },
+  itemName: { fontSize: 13, fontWeight: '700', color: '#333' },
+  itemQty: { fontSize: 11, color: '#999', marginTop: 2 },
+  itemPrice: { fontWeight: '800', fontSize: 14, color: '#333' },
+  billCard: { backgroundColor: '#333', borderRadius: 25, padding: 20, marginTop: 10 },
+  billRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
+  billLabel: { color: '#AAA', fontSize: 13 },
+  billValue: { color: '#FFF', fontWeight: '700' },
+  billDivider: { height: 1, backgroundColor: '#444', marginVertical: 12 },
+  totalRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  totalLabel: { color: '#FFF', fontSize: 16, fontWeight: '800' },
+  totalValue: { color: AppColors.primary, fontSize: 22, fontWeight: '900' },
+  footer: { position: 'absolute', bottom: 0, width: '100%', backgroundColor: '#fff', padding: 20, paddingBottom: 35, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', elevation: 15, borderTopWidth: 1, borderTopColor: '#EEE' },
+  footerLabel: { fontSize: 11, color: '#999', fontWeight: '700', textTransform: 'uppercase' },
+  footerPrice: { fontSize: 22, fontWeight: '900', color: AppColors.primary },
+  placeOrderBtn: { backgroundColor: AppColors.primary, paddingHorizontal: 30, paddingVertical: 15, borderRadius: 15, minWidth: 150, alignItems: 'center' },
+  placeOrderText: { color: '#fff', fontWeight: '800', fontSize: 16 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', padding: 25 },
+  bankCard: { backgroundColor: '#fff', borderRadius: 30, padding: 25, alignItems: 'center' },
+  bankTitle: { fontSize: 18, fontWeight: '800', marginBottom: 20, color: '#333' },
+  qrContainer: { padding: 15, backgroundColor: '#F9F9F9', borderRadius: 20, marginBottom: 20, borderWidth: 1, borderColor: '#EEE' },
+  bankDetails: { fontWeight: '700', color: '#555', fontSize: 13 },
+  bankAmount: { fontSize: 24, fontWeight: '900', color: AppColors.primary, marginVertical: 12 },
+  doneBtn: { backgroundColor: AppColors.primary, width: '100%', padding: 16, borderRadius: 15, alignItems: 'center', marginTop: 10 },
+  doneBtnText: { color: '#fff', fontWeight: '800', fontSize: 16 },
+  secureBadge: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6, marginTop: 25 },
+  secureText: { fontSize: 11, color: '#999', fontWeight: '600' }
 });
-
-

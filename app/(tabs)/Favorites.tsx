@@ -31,7 +31,7 @@ export default function FavoritesScreen() {
   const handleSort = (newSort: SortOption) => {
     setSortBy(newSort);
     let sorted = [...favorites];
-    
+
     switch (newSort) {
       case 'price-low':
         sorted.sort((a, b) => a.price - b.price);
@@ -50,12 +50,12 @@ export default function FavoritesScreen() {
 
   // Render product card for grid view
   const renderProductCard = (item: any) => (
-    <TouchableOpacity 
+    <TouchableOpacity
       key={item.id}
-      style={{ 
-        flex: 1, 
-        backgroundColor: '#fff', 
-        borderRadius: 14, 
+      style={{
+        flex: 1,
+        backgroundColor: '#fff',
+        borderRadius: 14,
         overflow: 'hidden',
         shadowColor: '#000',
         shadowOpacity: 0.06,
@@ -65,9 +65,13 @@ export default function FavoritesScreen() {
       }}
     >
       <View style={{ position: 'relative', height: 160, backgroundColor: '#f5f5f5' }}>
-        <Image source={item.image} style={{ width: '100%', height: '100%' }} />
+        <Image
+          source={{ uri: item.image || 'https://via.placeholder.com/150' }}
+          style={{ width: '100%', height: '100%' }}
+          resizeMode="cover"
+        />
         {/* Favorite Button */}
-        <TouchableOpacity 
+        <TouchableOpacity
           style={{ position: 'absolute', top: 8, right: 8, backgroundColor: '#ffffff90', width: 32, height: 32, borderRadius: 16, justifyContent: 'center', alignItems: 'center' }}
           onPress={() => {
             removeFavorite(item.id);
@@ -80,7 +84,7 @@ export default function FavoritesScreen() {
 
       <View style={{ padding: 10 }}>
         <Text style={{ fontWeight: '700', fontSize: 12, color: '#333', marginBottom: 4 }} numberOfLines={2}>{item.name}</Text>
-        
+
         {/* Rating */}
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
           <Star size={12} color="#ffb300" fill="#ffb300" />
@@ -88,10 +92,19 @@ export default function FavoritesScreen() {
         </View>
 
         {/* Price */}
-        <Text style={{ fontWeight: '800', fontSize: 13, color: AppColors.primary, marginBottom: 8 }}>{item.price.toLocaleString('vi-VN')}đ</Text>
-
+        <Text style={{
+          fontWeight: '800',
+          fontSize: 14,
+          color: AppColors.primary,
+          marginBottom: 8
+        }}>
+          {Number(item.price).toLocaleString('vi-VN', {
+            minimumFractionDigits: 3,
+            maximumFractionDigits: 3
+          })}đ
+        </Text>
         {/* Add to cart button */}
-        <TouchableOpacity 
+        <TouchableOpacity
           style={{ backgroundColor: AppColors.primaryDark, paddingVertical: 6, borderRadius: 8, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 4 }}
           onPress={() => handleAddToCart(item)}
         >
@@ -108,8 +121,8 @@ export default function FavoritesScreen() {
       key={item.id}
       style={{ marginBottom: 12, backgroundColor: '#fff', borderRadius: 12, padding: 12, flexDirection: 'row', gap: 12, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 4, elevation: 2 }}
     >
-      <Image source={item.image} style={{ width: 100, height: 100, borderRadius: 10 }} />
-      
+      <Image source={{ uri: item.image || 'https://via.placeholder.com/150' }} style={{ width: 100, height: 100, borderRadius: 10 }} />
+
       <View style={{ flex: 1, justifyContent: 'space-between' }}>
         <View>
           <Text style={{ fontWeight: '700', fontSize: 13, color: '#333', marginBottom: 4 }} numberOfLines={2}>{item.name}</Text>
@@ -120,17 +133,27 @@ export default function FavoritesScreen() {
             </View>
             <Text style={{ fontSize: 11, color: '#999' }}>Có sẵn</Text>
           </View>
-          <Text style={{ fontWeight: '800', fontSize: 14, color: AppColors.primary }}>{item.price.toLocaleString('vi-VN')}đ</Text>
+          <Text style={{
+            fontWeight: '800',
+            fontSize: 14,
+            color: AppColors.primary,
+            marginBottom: 8
+          }}>
+            {Number(item.price).toLocaleString('vi-VN', {
+              minimumFractionDigits: 3,
+              maximumFractionDigits: 3
+            })}đ
+          </Text>
         </View>
 
         <View style={{ flexDirection: 'row', gap: 8 }}>
-            <TouchableOpacity 
-              style={{ flex: 1, backgroundColor: AppColors.primaryDark, paddingVertical: 6, borderRadius: 8, alignItems: 'center' }}
+          <TouchableOpacity
+            style={{ flex: 1, backgroundColor: AppColors.primaryDark, paddingVertical: 6, borderRadius: 8, alignItems: 'center' }}
             onPress={() => handleAddToCart(item)}
           >
             <Text style={{ fontSize: 11, fontWeight: '700', color: '#fff' }}>Thêm giỏ</Text>
           </TouchableOpacity>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={{ width: 32, backgroundColor: '#ffe8f0', paddingVertical: 6, borderRadius: 8, alignItems: 'center', justifyContent: 'center' }}
             onPress={() => {
               removeFavorite(item.id);
@@ -166,7 +189,7 @@ export default function FavoritesScreen() {
           <Heart size={80} color="#ffffff60" strokeWidth={1} />
           <Text style={{ fontSize: 18, fontWeight: '800', color: '#fff', marginTop: 20 }}>Danh sách yêu thích trống</Text>
           <Text style={{ fontSize: 14, color: '#ffffff80', marginTop: 8, textAlign: 'center' }}>Hãy nhấn biểu tượng ♥ ở sản phẩm để thêm vào danh sách</Text>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={{ marginTop: 32, backgroundColor: '#fff', paddingHorizontal: 32, paddingVertical: 12, borderRadius: 12 }}
             onPress={() => router.push('/(tabs)')}
           >
@@ -212,9 +235,9 @@ export default function FavoritesScreen() {
               ].map((option) => (
                 <TouchableOpacity
                   key={option.value}
-                  style={{ 
-                    paddingHorizontal: 10, 
-                    paddingVertical: 6, 
+                  style={{
+                    paddingHorizontal: 10,
+                    paddingVertical: 6,
                     borderRadius: 8,
                     backgroundColor: sortBy === option.value ? AppColors.primary : '#ffe8f0'
                   }}
@@ -231,10 +254,10 @@ export default function FavoritesScreen() {
           {/* View Mode Toggle */}
           <View style={{ flexDirection: 'row', gap: 8 }}>
             <TouchableOpacity
-              style={{ 
-                flex: 1, 
-                paddingVertical: 8, 
-                borderRadius: 8, 
+              style={{
+                flex: 1,
+                paddingVertical: 8,
+                borderRadius: 8,
                 alignItems: 'center',
                 backgroundColor: viewMode === 'grid' ? AppColors.primary : '#ffe8f0'
               }}
@@ -243,10 +266,10 @@ export default function FavoritesScreen() {
               <Text style={{ fontSize: 12, fontWeight: '600', color: viewMode === 'grid' ? '#fff' : AppColors.primary }}>⊞ Lưới</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={{ 
-                flex: 1, 
-                paddingVertical: 8, 
-                borderRadius: 8, 
+              style={{
+                flex: 1,
+                paddingVertical: 8,
+                borderRadius: 8,
                 alignItems: 'center',
                 backgroundColor: viewMode === 'list' ? AppColors.primary : '#ffe8f0'
               }}

@@ -100,7 +100,7 @@ export default function OrderHistoryScreen() {
           <View key={String(p.id)} style={styles.previewItem}>
             {p.img ? (
               <Image
-                source={typeof p.img === 'string' ? { uri: p.img } : p.img}
+                source={{ uri: Array.isArray(p.img) ? p.img?.[0]?.url : (typeof p.img === 'string' ? p.img : 'https://via.placeholder.com/150') }}
                 style={styles.previewImage}
               />
             ) : (

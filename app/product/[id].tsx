@@ -1,4 +1,3 @@
-import products from '@/constants/products';
 import { AppColors } from '@/constants/theme';
 import { useCart } from '@/contexts/CartContext';
 import { useFavorites } from '@/contexts/FavoritesContext';
@@ -7,17 +6,21 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Location from 'expo-location';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronLeft, Heart, MessageCircle, Share2, ShoppingCart } from 'lucide-react-native';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Alert,
   Image,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View
 } from 'react-native';
+
+// Import APIs
+import apiCategory, { CategoryData } from '@/api/apiCategory';
+import apiProduct, { ProductData } from '@/api/apiProduct';
+import apiPromotion, { PromotionData } from '@/api/apiPromotion';
 
 // This is a single-file product detail screen scaffolded to cover the 13 sections.
 // Replace placeholder data & integrate with backend as needed.
@@ -31,57 +34,53 @@ export default function ProductDetailScreen() {
 
   const paramId = Array.isArray(id) ? id[0] : id;
 
-  type ProductType = {
-    id: number | string;
-    name: string;
-    rating: number;
-    reviews: number;
-    sold: number;
-    price: number;
-    priceOld: number;
-    discountPercent: number;
-    images: any[];
-    variants: Record<string, string[]>;
-    description: string;
-    category?: string;
-    tags?: string[];
-  };
+  // State for API data
+  const [product, setProduct] = useState<ProductData | null>(null);
+  const [category, setCategory] = useState<CategoryData | null>(null);
+  const [promotions, setPromotions] = useState<PromotionData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Lookup product by id from shared product list
-  const product = useMemo<ProductType>(() => {
-    const pid = Number(paramId);
-    const found = products.find(p => Number(p.id) === pid);
-    if (found) return {
-      id: found.id,
-      name: found.name,
-      rating: found.rating ?? 0,
-      reviews: (found as any).reviews ?? 0,
-      sold: (found as any).sold ?? 0,
-      price: found.price,
-      priceOld: (found as any).priceOld ?? Math.round(found.price * 1.2),
-      discountPercent: found.discount ?? 0,
-      images: Array.isArray((found as any).image) ? (found as any).image : [(found as any).image],
-      variants: (found as any).variants ?? {},
-      description: (found as any).description ?? '',
-      category: (found as any).category ?? '',
-      tags: (found as any).tags ?? []
+  // Fetch product data
+  useEffect(() => {
+    const fetchProductData = async () => {
+      if (!paramId) return;
+
+      try {
+        setLoading(true);
+        const pid = Number(paramId);
+
+        // Fetch product detail
+        const productData = await apiProduct.getProductDetail(pid);
+        setProduct(productData);
+
+        // Fetch category if available
+        if (productData.category_id && productData.category_id.length > 0) {
+          const categoryData = await apiCategory.getCategoryDetail(productData.category_id[0].id);
+          setCategory(categoryData);
+        }
+
+        // Fetch promotions
+        const promoData = await apiPromotion.getPublicPromotions();
+        setPromotions(promoData.results || []);
+
+        // Add to recent
+        addRecent({
+          id: productData.id,
+          name: productData.name,
+          price: Number(productData.price) || 0,
+          img: productData.image?.[0]?.url || ''
+        });
+
+      } catch (err) {
+        console.error('Error fetching product:', err);
+        setError('Không thể tải thông tin sản phẩm');
+      } finally {
+        setLoading(false);
+      }
     };
-    // fallback minimal product
-    return {
-      id: paramId ?? 'p-1',
-      name: 'Sản phẩm không tồn tại',
-      rating: 0,
-      reviews: 0,
-      sold: 0,
-      price: 0,
-      priceOld: 0,
-      discountPercent: 0,
-      images: ['https://via.placeholder.com/800x800.png?text=No+Image'],
-      variants: {},
-      description: '',
-      category: '',
-      tags: []
-    };
+
+    fetchProductData();
   }, [paramId]);
 
   const [activeImage, setActiveImage] = useState(0);
@@ -92,29 +91,18 @@ export default function ProductDetailScreen() {
   const [shippingAddress, setShippingAddress] = useState<string | null>(null);
   const [locationLoading, setLocationLoading] = useState(false);
 
-  const subtotal = useMemo(() => product.price * qty, [product.price, qty]);
 
-  const relatedProducts = useMemo(() => {
-    const prodTags = (product as any).tags ?? [];
-    const nameLower = product.name.toLowerCase();
-
-    // Prioritize tag intersection, then same category, then keyword match (e.g., "serum")
-    const byTag = products.filter(p => (p as any).tags && prodTags.some((t: string) => ((p as any).tags as string[]).includes(t)));
-    if (byTag.length > 0) return byTag.filter(p => Number(p.id) !== Number(product.id)).slice(0, 8);
-
-    const cat = (product as any).category ? String((product as any).category).toLowerCase() : '';
-    const byCat = products.filter(p => (p as any).category && String((p as any).category).toLowerCase() === cat && Number(p.id) !== Number(product.id));
-    if (byCat.length > 0) return byCat.slice(0, 8);
-
-    if (nameLower.includes('serum')) return products.filter(p => p.name.toLowerCase().includes('serum') && Number(p.id) !== Number(product.id)).slice(0, 8);
-
-    return [];
-  }, [product]);
 
   const handleAddToCart = () => {
+    if (!product) return;
     // Basic add to cart; CartItem shape: {id, name, price, qty, img}
-    addToCart({ id: Number(product.id || 0), name: product.name, price: product.price, qty, img: product.images[0] });
-    addRecent({ id: String(product.id), name: product.name, price: product.price, img: product.images[0] });
+    addToCart({
+      id: product.id,
+      name: product.name,
+      price: Number(product.price) || 0,
+      qty,
+      img: product.image?.[0]?.url || ''
+    });
     Alert.alert('Đã thêm vào giỏ', 'Sản phẩm đã được thêm vào giỏ hàng');
   };
 
@@ -124,22 +112,38 @@ export default function ProductDetailScreen() {
   };
 
   // initialize fav from FavoritesContext
-  useEffect(() => {
-    const idNum = Number(product.id);
-    setFav(isFavorite(idNum));
-  }, [product.id, isFavorite]);
+  // --- LOGIC YÊU THÍCH (FAVORITES) ---
 
+  // 1. Đồng bộ state 'fav' với Context mỗi khi sản phẩm thay đổi
+  useEffect(() => {
+    if (product) {
+      setFav(isFavorite(product.id));
+    }
+  }, [product, isFavorite]);
+
+  // 2. Hàm xử lý khi bấm nút Tim
   const toggleFavorite = () => {
-    const idNum = Number(product.id);
-    if (isFavorite(idNum)) {
-      removeFavorite(idNum);
+    if (!product) return;
+
+    if (isFavorite(product.id)) {
+      // Nếu đã thích -> Xóa
+      removeFavorite(product.id);
       setFav(false);
+      // Có thể bỏ Alert nếu muốn trải nghiệm mượt hơn
+      // Alert.alert('Đã xóa', 'Đã xóa khỏi danh sách yêu thích'); 
     } else {
-      addFavorite({ id: Number(product.id), name: product.name, price: product.price, rating: product.rating, image: product.images[0] as any });
+      // Nếu chưa thích -> Thêm
+      addFavorite({
+        id: product.id,
+        name: product.name,
+        price: Number(product.price) || 0,
+        rating: Number(product.rating) || 5.0,
+        image: product.image?.[0]?.url || '' // Lấy ảnh đầu tiên
+      });
       setFav(true);
+      Alert.alert('Đã lưu', 'Sản phẩm đã được thêm vào mục Yêu thích ❤️');
     }
   };
-
   // Fetch device location and reverse-geocode to a readable address
   const fetchLocation = async () => {
     try {
@@ -173,6 +177,25 @@ export default function ProductDetailScreen() {
     fetchLocation();
   }, []);
 
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#faf9f8' }}>
+        <Text>Đang tải sản phẩm...</Text>
+      </View>
+    );
+  }
+
+  if (error || !product) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#faf9f8' }}>
+        <Text>{error || 'Sản phẩm không tồn tại'}</Text>
+        <TouchableOpacity onPress={() => router.back()} style={{ marginTop: 16, padding: 12, backgroundColor: AppColors.primary, borderRadius: 8 }}>
+          <Text style={{ color: '#fff' }}>Quay lại</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <LinearGradient colors={["#00000000", "#ffffff00"]} style={styles.headerGradient}>
@@ -181,13 +204,17 @@ export default function ProductDetailScreen() {
             <ChevronLeft size={22} color="#fff" />
           </TouchableOpacity>
           <View style={{ flexDirection: 'row', gap: 8 }}>
-            <TouchableOpacity onPress={() => setFav(s => !s)} style={styles.iconBtn}>
-              <Heart size={22} color={fav ? AppColors.primary : '#fff'} />
+            <TouchableOpacity onPress={toggleFavorite} style={styles.iconBtn}>
+              <Heart
+                size={22}
+                color={fav ? "#FF4D4D" : "#fff"} // Đổi màu đỏ khi active
+                fill={fav ? "#FF4D4D" : "transparent"} // Đổ màu bên trong
+              />
             </TouchableOpacity>
             <TouchableOpacity onPress={() => Alert.alert('Chia sẻ', 'Chia sẻ sản phẩm')} style={styles.iconBtn}>
               <Share2 size={22} color="#fff" />
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => router.push('/(tabs)/Cart') } style={styles.iconBtn}>
+            <TouchableOpacity onPress={() => router.push('/(tabs)/Cart')} style={styles.iconBtn}>
               <ShoppingCart size={22} color="#fff" />
             </TouchableOpacity>
           </View>
@@ -198,21 +225,21 @@ export default function ProductDetailScreen() {
         {/* 2. Banner images (carousel simplified) */}
         <View style={styles.bannerContainer}>
           {(() => {
-            const src = product.images[activeImage];
-            return <Image source={typeof src === 'string' ? { uri: src } : src} style={styles.bannerImage} />;
+            const src = product.image?.[activeImage]?.url || 'https://via.placeholder.com/400x400.png?text=No+Image';
+            return <Image source={{ uri: src }} style={styles.bannerImage} />;
           })()}
           <View style={styles.indicatorRow}>
-            {product.images.map((_, i) => (
+            {(product.image || []).map((_, i) => (
               <View key={i} style={[styles.dot, activeImage === i && styles.dotActive]} />
             ))}
           </View>
         </View>
         {/* Thumbnails */}
-        {product.images.length > 1 && (
+        {(product.image || []).length > 1 && (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8, paddingHorizontal: 12 }}>
-            {product.images.map((src, i) => (
+            {(product.image || []).map((img, i) => (
               <TouchableOpacity key={i} onPress={() => setActiveImage(i)} style={{ marginRight: 8, borderRadius: 8, overflow: 'hidden', borderWidth: activeImage === i ? 2 : 1, borderColor: activeImage === i ? AppColors.primary : '#eee' }}>
-                <Image source={typeof src === 'string' ? { uri: src } : src} style={{ width: 72, height: 72 }} />
+                <Image source={{ uri: img.url }} style={{ width: 72, height: 72 }} />
               </TouchableOpacity>
             ))}
           </ScrollView>
@@ -222,8 +249,8 @@ export default function ProductDetailScreen() {
         <View style={styles.section}>
           <Text style={styles.title}>{product.name}</Text>
           <View style={styles.rowBetween}>
-            <Text style={styles.rating}>⭐ {product.rating} · {product.reviews.toLocaleString()} đánh giá · {product.sold.toLocaleString()} đã bán</Text>
-            <TouchableOpacity onPress={() => Alert.alert('Chia sẻ', 'Chia sẻ') }>
+            <Text style={styles.rating}>⭐ {Number(product.rating) || 5.0} · {category?.name || 'Danh mục'}</Text>
+            <TouchableOpacity onPress={() => Alert.alert('Chia sẻ', 'Chia sẻ')}>
               <Text style={{ color: AppColors.primary }}>Chia sẻ</Text>
             </TouchableOpacity>
           </View>
@@ -231,52 +258,45 @@ export default function ProductDetailScreen() {
 
         {/* 4. Price */}
         <View style={styles.section}>
-          <Text style={styles.price}>{product.price.toLocaleString()}đ</Text>
+          <Text style={styles.price}>{Number(product.price).toLocaleString('vi-VN', {
+            minimumFractionDigits: 3,
+            maximumFractionDigits: 3
+          })}đ</Text>
           <View style={styles.rowBetween}>
-            <Text style={styles.priceOld}>{product.priceOld.toLocaleString()}đ</Text>
-            <Text style={styles.discount}>{product.discountPercent}%</Text>
+            <Text style={styles.priceOld}>
+              {Math.round(Number(product.price) * 1.2).toLocaleString('vi-VN')}đ
+            </Text>
+            <Text style={styles.discount}>17%</Text>
           </View>
         </View>
 
-        {/* 5. Variant selection */}
+        {/* 5. Quantity selection */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Chọn phân loại</Text>
-          {Object.entries(product.variants).map(([k, opts]) => (
-            <View key={k} style={{ marginTop: 8 }}>
-              <Text style={styles.variantLabel}>{k}</Text>
-              <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
-                {opts.map((o: string) => (
-                  <Pressable
-                    key={o}
-                    onPress={() => setSelectedVariant(s => ({ ...s, [k]: o }))}
-                    style={[styles.variantPill, selectedVariant[k] === o && styles.variantPillActive]}
-                  >
-                    <Text style={selectedVariant[k] === o ? styles.variantTextActive : styles.variantText}>{o}</Text>
-                  </Pressable>
-                ))}
-              </View>
-            </View>
-          ))}
-
-          <View style={{ marginTop: 12 }}>
-            <Text>Bạn đã chọn: {Object.values(selectedVariant).join(' – ') || 'Chưa chọn'}</Text>
-          </View>
-
+          <Text style={styles.sectionTitle}>Số lượng</Text>
           <View style={{ marginTop: 12, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
             <TouchableOpacity onPress={() => setQty(q => Math.max(1, q - 1))} style={styles.qtyBtn}><Text>-</Text></TouchableOpacity>
             <Text>{qty}</Text>
             <TouchableOpacity onPress={() => setQty(q => q + 1)} style={styles.qtyBtn}><Text>+</Text></TouchableOpacity>
-            <Text style={{ marginLeft: 12 }}>Tổng: {subtotal.toLocaleString()}đ</Text>
+            <Text style={{ marginLeft: 12 }}>Tổng: {(Number(product.price) * qty).toLocaleString('vi-VN', {
+              minimumFractionDigits: 3,
+              maximumFractionDigits: 3
+            })}đ</Text>
           </View>
         </View>
 
         {/* 6. Promotions */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Khuyến mãi & Voucher</Text>
-          <TouchableOpacity onPress={() => Alert.alert('Voucher', 'Thu thập voucher')} style={styles.promoRow}>
-            <Text>Giảm 15% cho đơn hàng từ 199k</Text>
-              <Text style={{ color: AppColors.primary }}>Thu thập</Text>
-          </TouchableOpacity>
+          {promotions.length === 0 ? (
+            <Text style={{ color: '#999' }}>Không có khuyến mãi nào</Text>
+          ) : (
+            promotions.slice(0, 3).map((promo) => (
+              <TouchableOpacity key={promo.id} onPress={() => Alert.alert('Voucher', promo.description)} style={styles.promoRow}>
+                <Text>{promo.name}: {promo.discount_type.value === 'Percentage' ? `${promo.discount_value}%` : `${promo.discount_value}đ`} off</Text>
+                <Text style={{ color: AppColors.primary }}>Thu thập</Text>
+              </TouchableOpacity>
+            ))
+          )}
         </View>
 
         {/* 7. Shipping info */}
@@ -290,51 +310,24 @@ export default function ProductDetailScreen() {
 
         {/* 8. Shop info removed as requested */}
 
-        {/* 9. Description */}
+        {/* 7. Description */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Mô tả sản phẩm</Text>
           <Text numberOfLines={5} style={{ color: '#444' }}>{product.description}</Text>
-            <TouchableOpacity onPress={() => Alert.alert('Xem thêm', product.description)}>
-            <Text style={{ color: AppColors.primary, marginTop: 8 }}>Xem thêm</Text>
-          </TouchableOpacity>
+          {product.description && product.description.length > 100 && (
+            <TouchableOpacity onPress={() => Alert.alert('Mô tả đầy đủ', product.description)}>
+              <Text style={{ color: AppColors.primary, marginTop: 8 }}>Xem thêm</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
-        {/* 10. Specifications */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Thông số kỹ thuật</Text>
-          <View style={styles.specRow}><Text>Thương hiệu</Text><Text>CeraVe</Text></View>
-          <View style={styles.specRow}><Text>Xuất xứ</Text><Text>Mỹ</Text></View>
-          <View style={styles.specRow}><Text>Dung tích</Text><Text>50ml</Text></View>
-          <View style={styles.specRow}><Text>Kết cấu</Text><Text>Cream</Text></View>
-        </View>
-
-        {/* 11. Reviews (placeholder) */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Đánh giá khách hàng</Text>
-          <Text style={{ fontWeight: '700' }}>{product.rating} · {product.reviews.toLocaleString()} đánh giá</Text>
-          <View style={{ marginTop: 8 }}>
-            <Text style={{ fontWeight: '700' }}>⭐⭐⭐⭐⭐</Text>
-            <Text>Dưỡng ẩm rất tốt, giao nhanh, hàng chuẩn chính hãng.</Text>
+        {/* 8. Ingredients */}
+        {product.ingredients && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Thành phần</Text>
+            <Text style={{ color: '#444' }}>{product.ingredients}</Text>
           </View>
-        </View>
-
-        {/* 12. Related products */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Sản phẩm liên quan</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8 }}>
-            {relatedProducts.length === 0 ? (
-              <View style={{ padding: 12 }}><Text style={{ color: '#999' }}>Không có sản phẩm liên quan</Text></View>
-            ) : (
-              relatedProducts.map((p: any) => (
-                <TouchableOpacity key={p.id} style={styles.relatedCard} onPress={() => router.push(`/product/${p.id}`)}>
-                  <Image source={typeof p.image === 'string' ? { uri: p.image } : p.image} style={{ width: 100, height: 100 }} />
-                  <Text style={{ fontSize: 12, fontWeight: '700', textAlign: 'center' }} numberOfLines={2}>{p.name}</Text>
-                  <Text style={{ color: AppColors.primary, fontWeight: '700' }}>{p.price.toLocaleString()}đ</Text>
-                </TouchableOpacity>
-              ))
-            )}
-          </ScrollView>
-        </View>
+        )}
 
         <View style={{ height: 120 }} />
       </ScrollView>
@@ -342,8 +335,12 @@ export default function ProductDetailScreen() {
       {/* 13. Sticky bottom bar */}
       <View style={styles.bottomBar}>
         <TouchableOpacity style={styles.bottomIcon}><MessageCircle size={20} color="#333" /></TouchableOpacity>
-          <TouchableOpacity style={styles.bottomIcon} onPress={() => setFav(s => !s)}>
-          <Heart size={20} color={fav ? AppColors.primary : '#333'} />
+        <TouchableOpacity onPress={toggleFavorite} style={styles.iconBtn}>
+          <Heart
+            size={22}
+            color={fav ? "#FF4D4D" : "#fff"} // Đổi màu đỏ khi active
+            fill={fav ? "#FF4D4D" : "transparent"} // Đổ màu bên trong
+          />
         </TouchableOpacity>
         <TouchableOpacity style={styles.cartBtn} onPress={handleAddToCart}><Text style={{ color: '#fff' }}>Thêm vào giỏ</Text></TouchableOpacity>
         <TouchableOpacity style={styles.buyBtn} onPress={handleBuyNow}><Text style={{ color: '#fff', fontWeight: '800' }}>Mua ngay</Text></TouchableOpacity>

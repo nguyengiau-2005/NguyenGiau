@@ -4,29 +4,39 @@ import { AppColors, Fonts } from '@/constants/theme';
 import { useAuth } from '@/contexts/Auth';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { Eye, EyeOff, Lock, Mail, User } from 'lucide-react-native';
+import { Eye, EyeOff, Lock, Mail, Phone, User } from 'lucide-react-native'; // Thêm icon Phone
 import { useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 
 export default function SignupScreen() {
   const router = useRouter();
-  const { signup } = useAuth();
+  // Giả sử hàm signup trong AuthContext đã được cập nhật để nhận thêm phone và role
+  const { signup } = useAuth(); 
+  
   const [fullName, setFullName] = useState('');
+  const [phone, setPhone] = useState(''); // Thêm state Phone
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSignup = async () => {
-    if (!fullName || !email || !password || !confirmPassword) {
+const handleSignup = async () => {
+    // 1. Chuẩn hóa dữ liệu (Xóa khoảng trắng thừa)
+    const cleanFullName = fullName.trim();
+    const cleanEmail = email.trim();
+    const cleanPhone = phone.trim();
+
+    // 2. Validate cơ bản
+    if (!cleanFullName || !cleanPhone || !cleanEmail || !password || !confirmPassword) {
       Alert.alert('Lỗi', 'Vui lòng điền tất cả các trường');
       return;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert('Lỗi', 'Mật khẩu không khớp');
+      Alert.alert('Lỗi', 'Mật khẩu xác nhận không khớp');
       return;
     }
 
@@ -35,25 +45,56 @@ export default function SignupScreen() {
       return;
     }
 
+    // Validate số điện thoại (10-11 số)
+    const phoneRegex = /^[0-9]{10,11}$/;
+    if (!phoneRegex.test(cleanPhone)) {
+       Alert.alert('Lỗi', 'Số điện thoại không hợp lệ');
+       return;
+    }
+
+    // Validate Email cơ bản
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(cleanEmail)) {
+        Alert.alert('Lỗi', 'Email không hợp lệ');
+        return;
+    }
+
     setIsLoading(true);
     try {
-      await signup(email, password, fullName);
+// Role gửi lên là "USER" (Khớp với Option trong Baserow)
+      await signup({
+        email: cleanEmail,
+        password: password,
+        full_name: cleanFullName,
+        phone: cleanPhone,
+        role: "USER", // ĐÃ SỬA: "User" -> "USER"
+        
+        // Gửi kèm các trường địa chỉ rỗng để tránh lỗi thiếu trường (nếu API bắt buộc)
+        address_line: "",
+        ward: "",
+        district: "",
+        city: ""
+      });
+
       Alert.alert('Thành công', 'Đăng ký thành công', [
         {
-          text: 'OK',
+          text: 'Đăng nhập ngay',
           onPress: () => {
-            // Redirect to login
+            // Chuyển hướng về trang đăng nhập thay vì replace để giữ stack nếu cần
+            // Hoặc dùng replace nếu muốn xóa lịch sử
             router.replace('/auth/login');
           },
         },
       ]);
-    } catch (error) {
-      Alert.alert('Lỗi', 'Đăng ký thất bại. Vui lòng thử lại.');
+    } catch (error: any) {
+      console.error("Signup Error:", error);
+      // Lấy message lỗi chi tiết từ API nếu có
+      const message = error.response?.data?.error || error.message || 'Đăng ký thất bại. Vui lòng thử lại.';
+      Alert.alert('Lỗi', message);
     } finally {
       setIsLoading(false);
     }
   };
-
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -91,6 +132,23 @@ export default function SignupScreen() {
             />
           </View>
 
+          {/* Phone Input (MỚI) */}
+          <View style={styles.inputWrapper}>
+            <View style={styles.inputLabel}>
+              <Phone size={18} color={AppColors.primaryDark} />
+              <ThemedText style={styles.labelText}>Số điện thoại</ThemedText>
+            </View>
+            <TextInput
+              style={styles.input}
+              placeholder="Nhập số điện thoại"
+              placeholderTextColor={AppColors.textMuted}
+              value={phone}
+              onChangeText={setPhone}
+              keyboardType="phone-pad"
+              editable={!isLoading}
+            />
+          </View>
+
           {/* Email Input */}
           <View style={styles.inputWrapper}>
             <View style={styles.inputLabel}>
@@ -104,6 +162,7 @@ export default function SignupScreen() {
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
+              autoCapitalize="none"
               editable={!isLoading}
             />
           </View>

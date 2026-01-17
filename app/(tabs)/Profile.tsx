@@ -142,7 +142,7 @@ export default function ProfileScreen() {
 
               <View style={{ flex: 1, justifyContent: 'space-around' }}>
                 <View>
-                  <Text style={{ fontSize: 16, fontWeight: '800', color: '#333', marginBottom: 2 }}>{user.fullName}</Text>
+                  <Text style={{ fontSize: 16, fontWeight: '800', color: '#333', marginBottom: 2 }}>{user.full_name}</Text>
                   <Text style={{ fontSize: 12, color: '#999', marginBottom: 4 }}>{user.email}</Text>
                   {user.phone && <Text style={{ fontSize: 12, color: '#999' }}>{user.phone}</Text>}
                 </View>
@@ -337,31 +337,6 @@ export default function ProfileScreen() {
               <ChevronRight size={20} color="#ccc" strokeWidth={2} />
             </TouchableOpacity>
           ))}
-
-          {/* Xem lại onboarding */}
-          <TouchableOpacity
-            style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', padding: 14, borderRadius: 12, marginBottom: 10, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 3, elevation: 1 }}
-            onPress={async () => {
-              try {
-                // eslint-disable-next-line @typescript-eslint/no-var-requires
-                const AsyncStorage = require('@react-native-async-storage/async-storage').default;
-                await AsyncStorage.removeItem('welcome_seen');
-              } catch (e) {
-                // ignore if not available
-              }
-              // navigate to welcome screen (use an any-cast to avoid strict route typing here)
-              router.replace('/welcome' as any);
-            }}
-          >
-            <View style={{ width: 40, height: 40, borderRadius: 10, backgroundColor: '#ffe8f0', justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
-              <Info size={20} color={AppColors.primary} strokeWidth={1.5} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 13, fontWeight: '600', color: '#333' }}>Xem lại onboarding</Text>
-              <Text style={{ fontSize: 11, color: '#999', marginTop: 2 }}>Hiển thị lại màn hình chào mừng</Text>
-            </View>
-            <ChevronRight size={20} color="#ccc" strokeWidth={2} />
-          </TouchableOpacity>
         </View>
 
         {/* ====== LOGOUT BUTTON ====== */}

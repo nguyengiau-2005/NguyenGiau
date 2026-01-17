@@ -5,12 +5,12 @@
 
 import { Platform } from 'react-native';
 
-const tintColorLight = '#0a7ea4';
+const tintColorLight = '#219ec8';
 const tintColorDark = '#fff';
 
 export const Colors = {
   light: {
-    text: '#0B1620',
+    text: '#0d61b0',
     background: '#F7FAFC',
     tint: tintColorLight,
     icon: '#687076',
@@ -19,7 +19,7 @@ export const Colors = {
   },
   dark: {
     text: '#ECEDEE',
-    background: '#151718',
+    background: '#5ab9e9',
     tint: tintColorDark,
     icon: '#9BA1A6',
     tabIconDefault: '#9BA1A6',
@@ -53,31 +53,31 @@ export const Fonts = Platform.select({
 });
 
 export const AppColors = {
-  // Pink‑purple pastel theme (hồng ánh tím)
+  // Deep Navy-Blue Professional Theme (Xanh navy chuyên nghiệp)
   // Core palette
-  primary: '#E69FF6',        // pastel pink-purple (main)
-  primaryLight: '#F9E8FB',   // very light/airy pink tint
-  primaryDark: '#9B3FBF',    // darker purple for CTAs
-  primaryGradient: ['#E69FF6', '#D08BF8'] as const,
-  brandGradient: ['#E69FF6', '#B573FF'] as const,
+  primary: '#3570d6',        // deep navy blue (main - trầm tính)
+  primaryLight: '#EDF2F7',   // light blue-gray tint
+  primaryDark: '#7e9ddb',    // very dark navy for CTAs
+  primaryGradient: ['#2D3748', '#4A5568'] as const,
+  brandGradient: ['#2D3748', '#1A202C'] as const,
 
   // Contrast / surface tokens
-  background: '#FFF7FB',     // app background (soft pinkish white)
-  surface: '#FFFFFF',        // cards and surfaces
-  surfaceElevated: '#FFF9FE',
+  background: '#F7FAFC',     // clean light background
+  surface: '#FFFFFF',        // pure white for cards
+  surfaceElevated: '#F8FAFC',
 
-  // Text colors
-  textPrimary: '#231428',    // deep muted purple for high contrast
-  textSecondary: '#5F4660',
-  textMuted: '#9F84A8',
+  // Text colors - trầm tính và dễ đọc
+  textPrimary: '#1A202C',    // very dark for high contrast
+  textSecondary: '#4A5568',
+  textMuted: '#718096',
 
   // On-colors (what color to use on top of primary / surface)
   onPrimary: '#FFFFFF',
-  onSurface: '#231428',
+  onSurface: '#1A202C',
 
-  // Utility
-  disabled: '#CBBED0',
-  divider: '#F3E8F7',
+  // Utility - màu trầm
+  disabled: '#A0AEC0',
+  divider: '#E2E8F0',
 };
 
 export default { Colors, Fonts, AppColors };

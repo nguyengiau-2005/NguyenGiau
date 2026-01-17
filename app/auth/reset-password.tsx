@@ -1,121 +1,123 @@
+import apiUser from '@/api/apiUser';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { AppColors } from '@/constants/theme';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
-import { resetPassword, sendOtp, verifyOtp } from '../../scripts/mock-auth';
+import {
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  View
+} from 'react-native';
+import { sendOtp, verifyOtp } from '../../scripts/mock-auth';
 
 export default function ResetPasswordScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams() as { phone?: string; sessionId?: string };
-  const phone = params.phone || '';
+  
+  // Nhận thêm userId từ params để update chính xác vào hàng đó trên Baserow
+  const params = useLocalSearchParams() as { 
+    userId?: string; 
+    identifier?: string; 
+    sessionId?: string; 
+    otp?: string 
+  };
+  
+  const userId = params.userId || '';
+  const identifier = params.identifier || ''; // Có thể là phone hoặc email
   const initialSessionId = params.sessionId || '';
+  const otpFromParams = params.otp || '';
+
   const [sessionIdState, setSessionIdState] = useState(initialSessionId);
   const [resendCooldown, setResendCooldown] = useState<number>(initialSessionId ? 60 : 0);
   const cooldownRef = useRef<number | null>(null);
 
-  const [code, setCode] = useState('');
+  const [code, setCode] = useState(otpFromParams);
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
+  // --- LOGIC CẬP NHẬT MẬT KHẨU ---
   const handleReset = async () => {
+    // 1. Kiểm tra đầu vào
     if (!code || !password || !confirm) {
       Alert.alert('Lỗi', 'Vui lòng điền đầy đủ thông tin');
       return;
     }
 
-    try {
-      const ok = await verifyOtp(sessionIdState, code);
-      if (!ok) {
-        Alert.alert('Mã không đúng', 'Vui lòng kiểm tra lại mã xác thực');
-        return;
-      }
-    } catch (err: any) {
-      Alert.alert('Lỗi', err?.message || 'Vui lòng thử lại');
-      return;
-    }
-
     if (password.length < 6) {
-      Alert.alert('Lỗi', 'Mật khẩu phải có ít nhất 6 ký tự');
+      Alert.alert('Lỗi', 'Mật khẩu mới phải có ít nhất 6 ký tự');
       return;
     }
 
     if (password !== confirm) {
-      Alert.alert('Lỗi', 'Xác nhận mật khẩu không khớp');
+      Alert.alert('Lỗi', 'Mật khẩu xác nhận không khớp');
       return;
     }
 
     setIsLoading(true);
     try {
-      await resetPassword(sessionIdState, password);
-      Alert.alert('Thành công', 'Mật khẩu của bạn đã được cập nhật', [
-        { text: 'OK', onPress: () => router.push('/auth/login') },
+      // 2. Xác thực mã OTP trước
+      const isOtpValid = await verifyOtp(sessionIdState, code);
+      if (!isOtpValid) {
+        Alert.alert('Mã không đúng', 'Mã xác thực không chính xác hoặc đã hết hạn');
+        setIsLoading(false);
+        return;
+      }
+
+      // 3. Cập nhật mật khẩu lên Baserow bằng userId (Cách an toàn nhất)
+      // Nếu không có userId truyền qua, chúng ta dùng identifier để tìm lại lần nữa
+      let targetId = Number(userId);
+      
+      if (!targetId) {
+        const user = identifier.includes('@') 
+          ? (await apiUser.getAllUsers({ filters: JSON.stringify({ filters: [{ type: "equal", field: "email", value: identifier }] }) })).results[0]
+          : await apiUser.getUserByPhone(identifier);
+        
+        if (!user) throw new Error("Không tìm thấy tài khoản để cập nhật");
+        targetId = user.id;
+      }
+
+      // GỌI API PATCH
+      await apiUser.updateProfile(targetId, { password: password });
+      
+      Alert.alert('Thành công', 'Mật khẩu của bạn đã được cập nhật.', [
+        { text: 'Đăng nhập ngay', onPress: () => router.push('/auth/login') },
       ]);
+
     } catch (err: any) {
-      Alert.alert('Lỗi', err?.message || 'Không thể cập nhật mật khẩu. Vui lòng thử lại.');
+      console.error('Reset password error:', err);
+      Alert.alert('Lỗi', err?.message || 'Không thể lưu mật khẩu mới. Hãy kiểm tra lại kết nối.');
     } finally {
       setIsLoading(false);
     }
   };
 
+  // --- LOGIC ĐẾM NGƯỢC & GỬI LẠI MÃ ---
   useEffect(() => {
-    // start countdown if we have an initial sessionId
-    if (initialSessionId) {
-      setResendCooldown(60);
-    }
-  }, [initialSessionId]);
-
-  useEffect(() => {
-    if (resendCooldown <= 0) {
-      if (cooldownRef.current) {
-        clearInterval(cooldownRef.current as any);
-        cooldownRef.current = null;
-      }
-      return;
-    }
-
-    // start interval
-    if (!cooldownRef.current) {
+    if (resendCooldown > 0) {
       cooldownRef.current = setInterval(() => {
-        setResendCooldown((c) => {
-          if (c <= 1) {
-            if (cooldownRef.current) {
-              clearInterval(cooldownRef.current as any);
-              cooldownRef.current = null;
-            }
-            return 0;
-          }
-          return c - 1;
-        });
-      }, 1000) as unknown as number;
+        setResendCooldown((c) => c - 1);
+      }, 1000) as any;
     }
-
-    return () => {
-      if (cooldownRef.current) {
-        clearInterval(cooldownRef.current as any);
-        cooldownRef.current = null;
-      }
-    };
+    return () => { if (cooldownRef.current) clearInterval(cooldownRef.current); };
   }, [resendCooldown]);
 
   const handleResend = async () => {
-    if (!phone) {
-      Alert.alert('Lỗi', 'Số điện thoại không hợp lệ');
-      return;
-    }
+    if (resendCooldown > 0) return;
     try {
-      const { sessionId } = await sendOtp(phone);
+      const { sessionId, otp } = await sendOtp(identifier);
       setSessionIdState(sessionId);
-      // reset cooldown
+      setCode(otp); // Hiển thị mã mới ra cho dễ test
       setResendCooldown(60);
-      // update URL so it's reproducible (replace current)
-      router.replace(`/auth/reset-password?phone=${encodeURIComponent(phone)}&sessionId=${sessionId}`);
-      Alert.alert('Đã gửi lại mã', `Mã đã được gửi tới ${phone}`);
+      Alert.alert('Đã gửi lại', `Mã xác thực mới đã được gửi tới ${identifier}`);
     } catch (err) {
-      console.warn('resend sendOtp error', err);
-      Alert.alert('Lỗi', 'Không thể gửi lại mã. Vui lòng thử lại');
+      Alert.alert('Lỗi', 'Không thể gửi lại mã');
     }
   };
 
@@ -123,13 +125,15 @@ export default function ResetPasswordScreen() {
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={{ flexGrow: 1 }} bounces={false}>
         <ThemedView style={styles.container}>
-          <ThemedText type="title" style={styles.title}>Đặt lại mật khẩu</ThemedText>
-          <ThemedText style={styles.subtitle}>Mã xác thực đã được gửi tới: <ThemedText style={{ fontWeight: '800' }}>{phone}</ThemedText></ThemedText>
+          <ThemedText type="title" style={styles.title}>Mật khẩu mới</ThemedText>
+          <ThemedText style={styles.subtitle}>
+            Đặt lại mật khẩu cho: <ThemedText style={{ fontWeight: '800', color: AppColors.primaryDark }}>{identifier}</ThemedText>
+          </ThemedText>
 
           <View style={styles.inputWrapper}>
             <TextInput
               style={styles.input}
-              placeholder="Nhập mã xác thực"
+              placeholder="Nhập mã OTP"
               placeholderTextColor={AppColors.textMuted}
               keyboardType="number-pad"
               value={code}
@@ -153,7 +157,7 @@ export default function ResetPasswordScreen() {
           <View style={styles.inputWrapper}>
             <TextInput
               style={styles.input}
-              placeholder="Xác nhận mật khẩu"
+              placeholder="Xác nhận mật khẩu mới"
               placeholderTextColor={AppColors.textMuted}
               secureTextEntry
               value={confirm}
@@ -162,12 +166,26 @@ export default function ResetPasswordScreen() {
             />
           </View>
 
-          <TouchableOpacity style={[styles.button, isLoading && styles.disabled]} onPress={handleReset} disabled={isLoading}>
-            <ThemedText style={styles.buttonText}>{isLoading ? 'Đang xử lý...' : 'Cập nhật mật khẩu'}</ThemedText>
+          <TouchableOpacity 
+            style={[styles.button, isLoading && styles.disabled]} 
+            onPress={handleReset} 
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <ThemedText style={styles.buttonText}>Cập nhật mật khẩu</ThemedText>
+            )}
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.backLink} onPress={() => router.push('/auth/login')}>
-            <ThemedText style={{ color: AppColors.textMuted }}>Quay lại đăng nhập</ThemedText>
+          <TouchableOpacity 
+            onPress={handleResend} 
+            disabled={resendCooldown > 0}
+            style={{ marginTop: 20, alignItems: 'center' }}
+          >
+            <ThemedText style={{ color: resendCooldown > 0 ? '#999' : AppColors.primaryDark, fontWeight: '700' }}>
+              {resendCooldown > 0 ? `Gửi lại mã sau (${resendCooldown}s)` : 'Gửi lại mã xác thực'}
+            </ThemedText>
           </TouchableOpacity>
         </ThemedView>
       </ScrollView>
@@ -176,40 +194,27 @@ export default function ResetPasswordScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-    justifyContent: 'center',
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: '800',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: AppColors.textMuted,
-    marginBottom: 20,
-  },
-  inputWrapper: {
-    marginBottom: 12,
-  },
+  container: { flex: 1, padding: 25, justifyContent: 'center', backgroundColor: '#fff' },
+  title: { fontSize: 26, fontWeight: '800', marginBottom: 8, color: AppColors.primaryDark },
+  subtitle: { fontSize: 14, color: '#666', marginBottom: 30 },
+  inputWrapper: { marginBottom: 15 },
   input: {
-    borderWidth: 2,
-    borderColor: AppColors.primaryLight,
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    backgroundColor: AppColors.surface,
-    fontSize: 14,
+    borderWidth: 1.5,
+    borderColor: '#F0F0F0',
+    borderRadius: 15,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    backgroundColor: '#F9F9F9',
+    fontSize: 15,
   },
   button: {
     backgroundColor: AppColors.primaryDark,
-    paddingVertical: 14,
-    borderRadius: 12,
+    paddingVertical: 16,
+    borderRadius: 15,
     alignItems: 'center',
+    marginTop: 15,
   },
   disabled: { opacity: 0.6 },
-  buttonText: { color: AppColors.onPrimary, fontWeight: '800' },
-  backLink: { marginTop: 12, alignItems: 'center' },
+  buttonText: { color: '#fff', fontWeight: '800', fontSize: 16 },
+  backLink: { marginTop: 15, alignItems: 'center' },
 });
