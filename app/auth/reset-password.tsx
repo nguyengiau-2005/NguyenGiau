@@ -54,7 +54,7 @@ export default function ResetPasswordScreen() {
     if (params.sessionId && params.sessionId !== sessionIdState) {
       setSessionIdState(params.sessionId);
     }
-  }, [params.sessionId]);
+  }, [params.sessionId, sessionIdState]);
 
   const handleResend = async () => {
     if (!phone) {
@@ -71,7 +71,7 @@ export default function ResetPasswordScreen() {
       
       // Cập nhật lại URL mà không làm mới trang
       router.setParams({ sessionId });
-    } catch (err) {
+    } catch {
       Alert.alert('Lỗi', 'Không thể gửi lại mã. Vui lòng thử lại sau.');
     }
   };

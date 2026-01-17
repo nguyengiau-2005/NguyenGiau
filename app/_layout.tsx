@@ -24,7 +24,7 @@ function RootLayoutNav() {
     try {
       const value = await AsyncStorage.getItem('HAS_SEEN_INTRO');
       setHasSeenIntro(value === 'true');
-    } catch (e) {
+    } catch {
       setHasSeenIntro(false);
     }
   };

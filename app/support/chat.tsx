@@ -1,9 +1,11 @@
 import { AppColors } from '@/constants/theme';
 import { formatPriceFromAPI } from '@/utils/formatPrice';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronLeft, Image as ImgIcon, Star } from 'lucide-react-native';
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Image, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 type ChatMessage = {
@@ -30,13 +32,6 @@ export default function ChatSupportScreen() {
   const [sending, setSending] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(true);
   const flatRef = useRef<FlatList<ChatMessage>>(null);
-
-  let AsyncStorage: any | null = null;
-  try {
-    AsyncStorage = require('@react-native-async-storage/async-storage').default;
-  } catch (e) {
-    AsyncStorage = null;
-  }
 
   useEffect(() => {
     (async () => {
@@ -85,15 +80,15 @@ export default function ChatSupportScreen() {
         }, 300);
       }
     })();
-  }, [productId]);
+  }, [productId, productImage, productName, productPrice]);
 
   useEffect(() => {
     if (!AsyncStorage || messages.length === 0) return;
     (async () => {
       try {
         await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
-      } catch (err) {
-        console.warn('Failed to save chat history', err);
+      } catch (_) {
+        console.warn('Failed to save chat history', _);
       }
     })();
   }, [messages]);
@@ -194,14 +189,15 @@ export default function ChatSupportScreen() {
             value={input}
             onChangeText={setInput}
             multiline
+            editable={!sending}
             style={styles.textInput}
           />
           <TouchableOpacity 
             onPress={() => sendUserMessage(input)} 
-            disabled={!input.trim()}
-            style={[styles.sendButton, { backgroundColor: input.trim() ? AppColors.primary : '#E0E0E0' }]}
+            disabled={!input.trim() || sending}
+            style={[styles.sendButton, { backgroundColor: (input.trim() && !sending) ? AppColors.primary : '#E0E0E0' }]}
           >
-            <Text style={styles.sendButtonText}>Gửi</Text>
+            <Text style={styles.sendButtonText}>{sending ? '...' : 'Gửi'}</Text>
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -210,10 +206,9 @@ export default function ChatSupportScreen() {
 
   async function pickImage() {
     try {
-      const ImagePicker = require('expo-image-picker');
       const res = await ImagePicker.launchImageLibraryAsync({ quality: 0.7 });
       if (!res.canceled) sendUserMessage(undefined, res.assets[0].uri);
-    } catch (e) { Alert.alert("Lỗi", "Không thể chọn ảnh"); }
+    } catch { Alert.alert("Lỗi", "Không thể chọn ảnh"); }
   }
 
   function clearHistory() {

@@ -1,11 +1,11 @@
-import { BaserowLink, BaserowResponse } from './apiProduct';
 import axiosClient from './axiosClient';
 import { CONFIG } from './config';
 
 // --- Types & Interfaces ---
 
 /**
- * Cấu trúc cho trường Single Select trong Baserow (ví dụ: Status)
+ * Cấu trúc Single Select (Reused from apiUser)
+ * Dùng cho: status, payment_method, payment_status
  */
 export interface BaserowSelect {
   id: number;
@@ -14,39 +14,87 @@ export interface BaserowSelect {
 }
 
 /**
- * Cấu trúc dữ liệu Đơn hàng thực tế từ bảng 766847
- * Lưu ý: Các trường có khoảng trắng cần được bọc trong dấu ngoặc đơn
+ * Cấu trúc liên kết bảng (Reused)
+ * Dùng cho: order_items
+ */
+export interface BaserowLink {
+  id: number;
+  value: string;
+}
+
+/**
+ * Cấu trúc dữ liệu Đơn hàng (Order)
+ * Khớp với JSON: order_number, status, total, order_items...
  */
 export interface OrderData {
   id: number;
   order: string;
-  'Order Number': string;   // ORD-1001
-  Customer: BaserowLink[];   // Liên kết đến bảng Khách hàng (thường chứa email)
-  'Order Date': string;      // 2023-10-05T10:20:00Z
-  'Total Amount': string;    // "199.99" (dạng chuỗi)
-  Status: BaserowSelect;     // Object chứa value và color
-  Payment: BaserowLink[];    // Liên kết bảng Payment (trường cũ/phụ)
-  OrderItems: BaserowLink[]; // Liên kết bảng Order Items
-  Payments: BaserowLink[];   // Liên kết bảng Payments (trường chính)
+  order_number: string;      // Mã đơn hàng (VD: #ORD-001)
+  status: BaserowSelect;     // Trạng thái đơn (Mới, Đang giao, Hoàn thành...)
+  
+  // Các trường tiền tệ Baserow trả về dạng string
+  subtotal: string;
+  shipping_cost: string;
+  discount: string;
+  total: string;
+  
+  payment_method: BaserowSelect; // COD, Chuyển khoản...
+  payment_status: BaserowSelect; // Chưa thanh toán, Đã thanh toán...
+  
+  delivery_address: string;
+  note: string;
+  
+  created_at: string;
+  updated_at: string;
+  
+  order_items: BaserowLink[]; // Liên kết sang bảng chi tiết đơn hàng (Order Items)
+}
+
+/**
+ * Payload để tạo đơn hàng mới (Khi POST)
+ * Baserow yêu cầu format khác một chút khi gửi dữ liệu lên
+ */
+export interface CreateOrderPayload {
+  order_number: string;
+  status?: string | number;         // Gửi value (string) hoặc ID (number)
+  subtotal: number | string;
+  shipping_cost: number | string;
+  discount: number | string;
+  total: number | string;
+  payment_method: string | number;
+  payment_status: string | number;
+  delivery_address: string;
+  note?: string;
+  order_items: number[];            // Mảng ID của các dòng trong bảng Order Items
+}
+
+/**
+ * Cấu trúc phản hồi phân trang
+ */
+export interface BaserowResponse<T> {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: T[];
 }
 
 // --- API Functions ---
 
+// Base URL cho table Order
 const getOrderUrl = () => `/${CONFIG.ORDER_TABLE_ID}/?user_field_names=true`;
 
 const apiOrder = {
   /**
-   * 1. Lấy tất cả danh sách đơn hàng
-   * @returns Trả về BaserowResponse chứa mảng kết quả OrderData[]
+   * 1. Lấy danh sách đơn hàng (Thường dùng cho trang Admin quản lý đơn)
+   * @param params sort, page, size, search
    */
-  getAllOrders: async (): Promise<BaserowResponse<OrderData>> => {
-    const response = await axiosClient.get(getOrderUrl());
+  getAllOrders: async (params?: any): Promise<BaserowResponse<OrderData>> => {
+    const response = await axiosClient.get(getOrderUrl(), { params });
     return response.data;
   },
 
   /**
-   * 2. Lấy chi tiết một đơn hàng theo ID
-   * @param id ID của dòng đơn hàng
+   * 2. Lấy chi tiết đơn hàng theo ID
    */
   getOrderDetail: async (id: number): Promise<OrderData> => {
     const response = await axiosClient.get(`/${CONFIG.ORDER_TABLE_ID}/${id}/?user_field_names=true`);
@@ -54,25 +102,45 @@ const apiOrder = {
   },
 
   /**
-   * 3. Lọc đơn hàng theo Customer ID (Helper)
-   * Giúp lấy lịch sử mua hàng của một khách hàng cụ thể
+   * 3. Tạo đơn hàng mới (Checkout)
+   * Lưu ý: Trước khi gọi hàm này, bạn thường phải tạo các dòng trong bảng "Order Items" trước,
+   * lấy được ID của chúng, rồi truyền vào mảng `order_items` ở đây.
    */
-  getOrdersByCustomer: async (customerId: number): Promise<BaserowResponse<OrderData>> => {
-    const filterParams = encodeURIComponent(JSON.stringify({
-      filter_type: "AND",
-      filters: [{ type: "link_row_has", field: "Customer", value: customerId.toString() }]
-    }));
-    const response = await axiosClient.get(`${getOrderUrl()}&filters=${filterParams}`);
+  createOrder: async (data: CreateOrderPayload): Promise<OrderData> => {
+    // Khi tạo, URL cần query user_field_names=true để map key chính xác
+    const response = await axiosClient.post(getOrderUrl(), data);
     return response.data;
   },
 
   /**
-   * 4. Tạo đơn hàng mới
-   * @param data Dữ liệu đơn hàng cần tạo (chú ý tên trường khớp Baserow)
+   * 4. Cập nhật trạng thái đơn hàng (Dùng cho Admin/Shipper)
+   * Ví dụ: Cập nhật status từ "Mới" -> "Đang giao"
    */
-  createOrder: async (data: Partial<OrderData>): Promise<OrderData> => {
-    const response = await axiosClient.post(`${getOrderUrl()}`, data);
+  updateOrderStatus: async (id: number, statusValue: string): Promise<OrderData> => {
+    const url = `/${CONFIG.ORDER_TABLE_ID}/${id}/?user_field_names=true`;
+    // Với field Single Select, chỉ cần gửi value string lên là Baserow tự map
+    const response = await axiosClient.patch(url, { status: statusValue });
     return response.data;
+  },
+
+  /**
+   * 5. Lấy đơn hàng theo Mã đơn (Order Number)
+   * Giúp user tra cứu đơn hàng: /order-tracking/ORD-123
+   */
+  getOrderByCode: async (orderNumber: string): Promise<OrderData | null> => {
+    const filterParams = encodeURIComponent(JSON.stringify({
+      filter_type: "AND",
+      filters: [
+        { type: "equal", field: "order_number", value: orderNumber }
+      ]
+    }));
+    
+    const response = await axiosClient.get<BaserowResponse<OrderData>>(`${getOrderUrl()}&filters=${filterParams}`);
+    
+    if (response.data.results && response.data.results.length > 0) {
+      return response.data.results[0];
+    }
+    return null;
   }
 };
 

@@ -47,7 +47,7 @@ export default function SignupScreen() {
           },
         },
       ]);
-    } catch (error) {
+    } catch {
       Alert.alert('Lỗi', 'Đăng ký thất bại. Vui lòng thử lại.');
     } finally {
       setIsLoading(false);

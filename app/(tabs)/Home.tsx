@@ -11,7 +11,7 @@ import { ActivityIndicator, Alert, Image, ScrollView, Text, TextInput, Touchable
 // Import API Services
 import apiCategory, { CategoryData } from '@/api/apiCategory';
 import apiProduct, { ProductData } from '@/api/apiProduct';
-import apiVoucher, { Voucher } from '@/api/apiVouchers';
+import apiVoucher from '@/api/apiVouchers';
 import { formatPriceFromAPI } from '@/utils/formatPrice';
 import toImageSource from '@/utils/toImageSource';
 
@@ -38,12 +38,10 @@ export default function HomeScreen() {
 
   const [searchText, setSearchText] = useState('');
   const [showSearchDropdown, setShowSearchDropdown] = useState(false);
-  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
-  const [bannerIndex, setBannerIndex] = useState(0);
   const bannerRef = useRef<ScrollView | null>(null);
+  const currentBannerIndex = useRef(0);
 
   // Auto-play settings cho Banner
-  const SLIDE_WIDTH = 292;
   const SLIDE_INTERVAL = 4000;
 
   // Gọi API lấy dữ liệu
@@ -69,26 +67,23 @@ export default function HomeScreen() {
     fetchData();
 
     const timer = setInterval(() => {
-      setBannerIndex((prev) => {
-        const next = (prev + 1) % banners.length;
-        bannerRef.current?.scrollTo({ x: next * SLIDE_WIDTH, animated: true });
-        return next;
-      });
+      currentBannerIndex.current = (currentBannerIndex.current + 1) % banners.length;
+      bannerRef.current?.scrollTo({ x: currentBannerIndex.current * 292, animated: true });
     }, SLIDE_INTERVAL);
     return () => clearInterval(timer);
   }, []);
 
   const handleAddToCart = (product: ProductData) => {
-    const imgUri = toImageSource(product.Image)?.uri || '';
+    const imgUri = toImageSource(product.image)?.uri || '';
     addToCart({
       id: product.id,
-      name: product.Name,
+      name: product.name,
       // SỬA LỖI: Chuyển đổi Price từ string sang number để khớp với kiểu dữ liệu của CartItem
-      price: Number(product.Price) || 0,
+      price: Number(product.price) || 0,
       img: imgUri,
       qty: 1
     });
-    Alert.alert('Thành công', `${product.Name} đã được thêm vào giỏ hàng`);
+    Alert.alert('Thành công', `${product.name} đã được thêm vào giỏ hàng`);
   };
 
   const headerCartCount = cart.reduce((sum, it) => sum + (it.qty || 0), 0);
@@ -97,12 +92,12 @@ export default function HomeScreen() {
     if (isFavorite(product.id)) {
       removeFavorite(product.id);
     } else {
-      const favImg = toImageSource(product.Image)?.uri || '';
+      const favImg = toImageSource(product.image)?.uri || '';
       addFavorite({
         id: product.id,
-        name: product.Name,
+        name: product.name,
         // SỬA LỖI: Chuyển đổi Price sang number
-        price: Number(product.Price) || 0,
+        price: Number(product.price) || 0,
         // SỬA LỖI: Chuyển rating sang kiểu number (5.0 thay vì "5.0") để khớp với FavoriteItem
         rating: 5.0,
         image: favImg
@@ -113,19 +108,14 @@ export default function HomeScreen() {
   const filteredProducts = productsList.filter(product => {
     const q = searchText.trim().toLowerCase();
 
-    // Filter by selected category if any
-    if (selectedCategoryId) {
-      const hasCat = Array.isArray(product.Categories) && product.Categories.some((c: any) => Number(c.id) === Number(selectedCategoryId));
-      if (!hasCat) return false;
-    }
-
+    // Filter by search query
     if (!q) return true;
 
     // Match product name
-    if (product.Name && product.Name.toLowerCase().includes(q)) return true;
+    if (product.name && product.name.toLowerCase().includes(q)) return true;
 
     // Match linked category names (BaserowLink.value)
-    if (Array.isArray(product.Categories) && product.Categories.some((c: any) => (c.value || '').toLowerCase().includes(q))) return true;
+    if (Array.isArray(product.category_id) && product.category_id.some((c: any) => (c.value || '').toLowerCase().includes(q))) return true;
 
     return false;
   });
@@ -149,7 +139,7 @@ export default function HomeScreen() {
     >
       <View style={{ position: 'relative', height: 160, backgroundColor: '#f5f5f5', overflow: 'hidden' }}>
         <Image
-          source={toImageSource(item.Image) || { uri: 'https://via.placeholder.com/150' }}
+          source={toImageSource(item.image) || { uri: 'https://via.placeholder.com/150' }}
           style={{ width: '100%', height: '100%' }}
         />
 
@@ -161,12 +151,12 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
       <View style={{ padding: 10 }}>
-        <Text style={{ fontWeight: '700', fontSize: 12, color: '#333' }} numberOfLines={2}>{item.Name}</Text>
+        <Text style={{ fontWeight: '700', fontSize: 12, color: '#333' }} numberOfLines={2}>{item.name}</Text>
         <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
           <Star size={12} color="#ffb300" fill="#ffb300" />
           <Text style={{ marginLeft: 3, fontSize: 11, fontWeight: '600', color: '#666' }}>5.0</Text>
         </View>
-        <Text style={{ marginTop: 8, fontWeight: '800', fontSize: 13, color: AppColors.primary }}>{formatPriceFromAPI(item.Price)}</Text>
+        <Text style={{ marginTop: 8, fontWeight: '800', fontSize: 13, color: AppColors.primary }}>{formatPriceFromAPI(item.price)}</Text>
         <TouchableOpacity
           style={{ marginTop: 8, backgroundColor: AppColors.primaryDark, paddingVertical: 6, borderRadius: 8, alignItems: 'center' }}
           onPress={() => handleAddToCart(item)}
@@ -330,7 +320,7 @@ export default function HomeScreen() {
                 onPress={() => {
                   router.push({
                     pathname: "/category/[id]", // Phải khớp chính xác với tên file app/category/[id].tsx
-                    params: { id: cat.id, name: cat.Name }
+                    params: { id: cat.id, name: cat.name }
                   });
                 }} style={{
                   alignItems: 'center',
@@ -361,7 +351,7 @@ export default function HomeScreen() {
                 </View>
 
                 <Text style={{ fontSize: 12, fontWeight: '600', color: '#333' }}>
-                  {cat.Name}
+                  {cat.name}
                 </Text>
               </TouchableOpacity>
             );

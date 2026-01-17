@@ -1,26 +1,38 @@
-import { BaserowResponse, ProductData } from './apiProduct';
-import axiosClient from './axiosClient';
+import { ProductData } from './apiProduct';
 
-const apiSearch = {
-  /**
-   * Upload an image (multipart/form-data) and receive product matches from backend.
-   * Backend should accept `file` field and return BaserowResponse<ProductData> or similar.
-   */
-  searchByImage: async (file: { uri: string; name?: string; type?: string }): Promise<BaserowResponse<ProductData>> => {
-    const form = new FormData();
-    // @ts-ignore - React Native FormData file
-    form.append('file', {
-      uri: file.uri,
-      name: file.name || 'photo.jpg',
-      type: file.type || 'image/jpeg'
-    });
+// Mock function for image search - replace with actual API call
+export const searchByImage = async (imageData: { uri: string; name?: string; type?: string }): Promise<{ results: ProductData[] }> => {
+  // Simulate API delay
+  await new Promise(resolve => setTimeout(resolve, 1000));
 
-    const response = await axiosClient.post('/search/image', form, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    });
+  // Mock response - return some sample products
+  // In real implementation, send image to backend for processing
+  const mockResults: ProductData[] = [
+    {
+      id: 1,
+      order: '1',
+      name: 'BLEMISH - Mụn Control',
+      slug: 'blemish-mun-control',
+      category_id: [{ id: 1, value: 'Skincare' }],
+      brand: 'Some Brand',
+      description: 'Kem điều trị mụn, làm dịu da.',
+      ingredients: 'Ingredients here',
+      image: [], // Add image data if needed
+      rating: '4.7',
+      price: '180000',
+      discount: '15',
+      is_bestseller: true,
+      tags: ['acne', 'treatment'],
+      product_sizes: [],
+      created_on: new Date().toISOString(),
+      updated_on: new Date().toISOString(),
+    },
+    // Add more mock products as needed
+  ];
 
-    return response.data;
-  }
+  return { results: mockResults };
 };
 
-export default apiSearch;
+export default {
+  searchByImage,
+};

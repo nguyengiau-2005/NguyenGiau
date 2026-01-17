@@ -176,7 +176,7 @@ export default function FavoritesScreen() {
           <Text style={{ fontSize: 14, color: '#ffffff80', marginTop: 8, textAlign: 'center' }}>Hãy nhấn biểu tượng ♥ ở sản phẩm để thêm vào danh sách</Text>
           <TouchableOpacity
             style={{ marginTop: 32, backgroundColor: '#fff', paddingHorizontal: 32, paddingVertical: 12, borderRadius: 12 }}
-            onPress={() => router.push('/(tabs)')}
+            onPress={() => router.push('/(tabs)/Home' as any)}
           >
             <Text style={{ fontSize: 15, fontWeight: '700', color: AppColors.primary }}>Khám phá ngay</Text>
           </TouchableOpacity>

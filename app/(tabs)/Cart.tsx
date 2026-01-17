@@ -4,14 +4,14 @@ import useDeviceLocation from '@/hooks/useDeviceLocation';
 import { formatCurrency, formatPrice } from '@/utils/formatPrice';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, Gift, Home, MapPin, Minus, Plus, ShoppingCart, Trash2 } from 'lucide-react-native';
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Alert, Image, SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 const SHIPPING_FEE = 15000;
 const DISCOUNT_VOUCHER = 50000;
 
 export default function CartScreen() {
-  const { cart, removeFromCart, updateQty, updateVolume, setSelectedCheckoutItems } = useCart();
+  const { cart, removeFromCart, updateQty, setSelectedCheckoutItems } = useCart();
   const router = useRouter();
   const [selectedVoucher, setSelectedVoucher] = useState<string | null>(null);
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
@@ -42,7 +42,7 @@ export default function CartScreen() {
         <ShoppingCart size={100} color="#E0E0E0" />
         <Text style={styles.emptyTitle}>Giỏ hàng trống</Text>
         <Text style={styles.emptySubtitle}>Hãy chọn những món quà tuyệt vời cho chính mình nhé!</Text>
-        <TouchableOpacity style={styles.shopNowBtn} onPress={() => router.push('/(tabs)')}>
+        <TouchableOpacity style={styles.shopNowBtn} onPress={() => router.push('/(tabs)/Home' as any)}>
           <Text style={styles.shopNowText}>Khám phá ngay</Text>
         </TouchableOpacity>
       </View>
@@ -60,7 +60,7 @@ export default function CartScreen() {
           <Text style={styles.headerTitle}>Giỏ hàng</Text>
           <Text style={styles.headerSubtitle}>{cart.length} sản phẩm</Text>
         </View>
-        <TouchableOpacity onPress={() => router.push('/(tabs)')} style={styles.headerIcon}>
+        <TouchableOpacity onPress={() => router.push('/(tabs)/Home' as any)} style={styles.headerIcon}>
           <Home size={22} color="#333" />
         </TouchableOpacity>
       </View>

@@ -8,7 +8,7 @@ import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 export default function HelpCenterScreen() {
   const router = useRouter();
 
-  const items: Array<{ icon: React.ComponentType<any>; label: string; route: '/support/faq' | '/support/chat' | '/support/return_policy' | '/support/policy' }> = [
+  const items: { icon: React.ComponentType<any>; label: string; route: '/support/faq' | '/support/chat' | '/support/return_policy' | '/support/policy' }[] = [
     { icon: HelpCircle, label: 'FAQ', route: '/support/faq' },
     { icon: MessageSquare, label: 'Chat với CSKH', route: '/support/chat' },
     { icon: FileText, label: 'Chính sách đổi trả', route: '/support/return_policy' },

@@ -7,7 +7,7 @@ import { formatCurrency } from '@/utils/formatPrice';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useRouter } from 'expo-router';
 import { ChevronLeft, MapPin, ShoppingBag } from 'lucide-react-native';
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -1113,4 +1113,3 @@ const styles = StyleSheet.create({
     color: '#4CAF50',
   },
 });
-

@@ -1,9 +1,10 @@
 import { AppColors } from '@/constants/theme';
 import { useAuth } from '@/contexts/Auth';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { AlertCircle, Bell, ChevronRight, CreditCard, Edit3, FileText, Gift, Globe, Heart, HelpCircle, History, Info, Lock, LogOut, MapPin, MessageSquare, Moon, Package, Settings, ShoppingCart, Wallet } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Alert, Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
 export default function ProfileScreen() {
@@ -37,16 +38,13 @@ export default function ProfileScreen() {
     // load simple unread count from support chat history (non-user messages)
     (async () => {
       try {
-        // optional dependency
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        const AsyncStorage = require('@react-native-async-storage/async-storage').default;
         const raw = await AsyncStorage.getItem('support_chat_history_v1');
         if (raw) {
-          const msgs = JSON.parse(raw) as Array<{ sender?: string }>;
+          const msgs = JSON.parse(raw) as { sender?: string }[];
           const count = msgs.filter(m => m.sender && m.sender !== 'user').length;
           setChatUnread(count);
         }
-      } catch (e) {
+      } catch {
         // ignore if AsyncStorage not present
       }
     })();

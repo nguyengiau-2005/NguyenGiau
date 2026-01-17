@@ -80,10 +80,10 @@ export default function ImageSearchScreen() {
           <Text style={{ fontSize: 16, fontWeight: '800', marginVertical: 12 }}>Kết quả</Text>
           {results.map((p) => (
             <TouchableOpacity key={p.id} style={{ flexDirection: 'row', marginBottom: 12, backgroundColor: '#fafafa', padding: 8, borderRadius: 8 }} onPress={() => router.push(`/product/${p.id}`)}>
-              <Image source={toImageSource(p.Image) || { uri: 'https://via.placeholder.com/80' }} style={{ width: 80, height: 80, borderRadius: 8, marginRight: 8 }} />
+              <Image source={toImageSource(p.image) || { uri: 'https://via.placeholder.com/80' }} style={{ width: 80, height: 80, borderRadius: 8, marginRight: 8 }} />
               <View style={{ flex: 1 }}>
-                <Text style={{ fontWeight: '800' }}>{p.Name}</Text>
-                <Text style={{ color: AppColors.primary, fontWeight: '700', marginTop: 8 }}>{p.Price}đ</Text>
+                <Text style={{ fontWeight: '800' }}>{p.name}</Text>
+                <Text style={{ color: AppColors.primary, fontWeight: '700', marginTop: 8 }}>{p.price}đ</Text>
               </View>
             </TouchableOpacity>
           ))}

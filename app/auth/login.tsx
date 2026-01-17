@@ -28,12 +28,12 @@ export default function LoginScreen() {
       Alert.alert('Thành công', 'Đăng nhập thành công', [
         {
           text: 'OK',
-          onPress: () => {
-            router.replace('/(tabs)');
+            onPress: () => {
+            router.replace('/(tabs)/Home' as any);
           },
         },
       ]);
-    } catch (error) {
+    } catch {
       Alert.alert('Lỗi', 'Đăng nhập thất bại. Vui lòng thử lại.');
     } finally {
       setIsLoading(false);

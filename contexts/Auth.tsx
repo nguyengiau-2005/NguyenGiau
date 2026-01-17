@@ -2,142 +2,143 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 import apiUser, { User as APIUser } from '../api/apiUser';
 
+// Định nghĩa lại kiểu User trong Context để khớp với các màn hình (như Checkout)
 export type User = {
-  id?: string;
-  email?: string;
+  id: string;
+  email: string;
+  full_name: string;
   fullName?: string;
   phone?: string;
-  avatar?: string;
+  avatar?: string; // Lưu URL ảnh đầu tiên để hiển thị nhanh
+  points?: number;
+  address_line?: string;
+  ward?: string;
+  district?: string;
+  city?: string;
 };
 
 type AuthContextType = {
   user: User | null;
   isLoggedIn: boolean;
   login: (email: string, password: string) => Promise<void>;
-  signup: (email: string, password: string, fullName?: string) => Promise<void>;
+  signup: (email: string, password: string, fullName: string) => Promise<void>;
   logout: () => void;
-  // Keep the original updateProfile signature used in the app
-  updateProfile: (fullName: string, phone: string, avatar?: string) => Promise<void>;
+  updateProfile: (data: Partial<User>) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const STORAGE_KEY = 'AUTH_USER_V1';
+  const STORAGE_KEY = 'FIORA_AUTH_V1';
 
   useEffect(() => {
-    // Load saved user on mount
-    const load = async () => {
+    const loadSavedUser = async () => {
       try {
         const raw = await AsyncStorage.getItem(STORAGE_KEY);
-        if (raw) {
-          const parsed = JSON.parse(raw) as User;
-          setUser(parsed);
-        }
+        if (raw) setUser(JSON.parse(raw));
       } catch (e) {
-        // ignore load errors
+        console.error("Không thể tải thông tin đăng nhập");
       }
     };
-    load();
+    loadSavedUser();
   }, []);
+
+  // Helper để map từ API User sang Context User
+  const mapAPIUserToLocal = (apiUser: APIUser): User => ({
+    id: String(apiUser.id),
+    email: apiUser.email,
+    full_name: apiUser.full_name,
+    // Also expose camelCase/fullName for UI compatibility
+    fullName: (apiUser as any).full_name || (apiUser as any).fullName || '',
+    phone: apiUser.phone,
+    // Lấy URL ảnh đầu tiên từ mảng avatar của Baserow
+    avatar: (Array.isArray((apiUser as any).avatar) && (apiUser as any).avatar.length > 0)
+      ? ((apiUser as any).avatar[0]?.url || (apiUser as any).avatar[0])
+      : (typeof (apiUser as any).avatar === 'string' ? (apiUser as any).avatar : undefined),
+    points: apiUser.points,
+    address_line: apiUser.address_line,
+    ward: apiUser.ward,
+    district: apiUser.district,
+    city: apiUser.city,
+  });
 
   const login = async (email: string, password: string) => {
     try {
-      // Tìm user theo email từ Baserow
       const found = await apiUser.findByEmail(email);
-      if (!found) throw new Error('User not found');
+      if (!found) throw new Error('Email không tồn tại trên hệ thống');
 
-      // Nếu bảng lưu password (plaintext) so sánh đơn giản
-      if (found.password && found.password === password) {
-        const newUser = { id: String(found.id), email: found.email, fullName: found.full_name, phone: found.phone, avatar: found.avatar } as User;
-        setUser(newUser);
-        try {
-          await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(newUser));
-        } catch (e) {
-          // ignore storage errors
-        }
-        return;
+      // Kiểm tra mật khẩu (Plaintext theo cấu trúc bảng hiện tại)
+      if (found.password === password) {
+        const localUser = mapAPIUserToLocal(found);
+        setUser(localUser);
+        await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(localUser));
+      } else {
+        throw new Error('Mật khẩu không chính xác');
       }
-
-      // Nếu password không đúng
-      throw new Error('Invalid credentials');
     } catch (err) {
-      // Fallback: giữ mock delay như trước nếu API bị lỗi
-      await new Promise((resolve) => setTimeout(resolve, 600));
       throw err;
     }
   };
 
-  const signup = async (email: string, password: string, fullName?: string) => {
+  const signup = async (email: string, password: string, fullName: string) => {
     try {
-      // Tạo user trên Baserow
-      const payload: Partial<APIUser> = {
+      // 1. Kiểm tra email tồn tại chưa
+      const existing = await apiUser.findByEmail(email);
+      if (existing) throw new Error('Email này đã được đăng ký');
+
+      // 2. Tạo mới trên Baserow
+      const created = await apiUser.create({
         email,
         password,
         full_name: fullName,
-        provider: 'email',
-        role: 'user',
-        status: 'active',
-        email_verified: false,
-      };
-      const created = await apiUser.create(payload);
-      const newUser = { id: String(created.id), email: created.email, fullName: created.full_name, phone: created.phone, avatar: created.avatar } as User;
-      setUser(newUser);
-      try {
-        await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(newUser));
-      } catch (e) {
-        // ignore storage errors
-      }
+        points: 0,
+        role: { id: 1, value: "user", color: "light-blue" } as any // Default role
+      });
+
+      const localUser = mapAPIUserToLocal(created);
+      setUser(localUser);
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(localUser));
     } catch (err) {
-      await new Promise((resolve) => setTimeout(resolve, 600));
       throw err;
     }
   };
 
-  const logout = () => setUser(null);
-
-  // update logout to clear storage
-  const _logout = async () => {
+  const logout = async () => {
     try {
       await AsyncStorage.removeItem(STORAGE_KEY);
+      setUser(null);
     } catch (e) {
-      // ignore
+      setUser(null);
     }
-    setUser(null);
   };
 
-  const updateProfile = async (fullName: string, phone: string, avatar?: string) => {
-    setUser((prev) => {
-      const base = prev ? { ...prev } : ({} as User);
-      const updated = { ...base, fullName, phone, avatar: avatar ?? base.avatar } as User;
-      // persist
-      (async () => {
-        try {
-          await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-        } catch (e) {
-          // ignore
-        }
-      })();
-      return updated;
-    });
+  const updateProfile = async (updateData: Partial<User>) => {
+    if (!user?.id) return;
 
-    // Đồng bộ lên Baserow nếu có id
     try {
-      const current = (user as User) || null;
-      if (current && current.id) {
-        const idNum = Number(current.id);
-        if (!isNaN(idNum)) {
-          await apiUser.update(idNum, { full_name: fullName, phone, avatar });
-        }
-      }
+      // 1. Cập nhật lên Baserow (Map ngược lại trường API)
+      const apiPayload: Partial<APIUser> = {};
+      if (updateData.full_name) apiPayload.full_name = updateData.full_name;
+      if (updateData.phone) apiPayload.phone = updateData.phone;
+      if (updateData.address_line) apiPayload.address_line = updateData.address_line;
+      if (updateData.city) apiPayload.city = updateData.city;
+
+      const updatedAPI = await apiUser.update(Number(user.id), apiPayload);
+
+      // 2. Cập nhật State và Storage
+      const updatedLocal = mapAPIUserToLocal(updatedAPI);
+      setUser(updatedLocal);
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updatedLocal));
+      
     } catch (e) {
-      // ignore API errors for now
+      console.error("Lỗi cập nhật profile:", e);
+      throw new Error("Không thể cập nhật thông tin");
     }
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoggedIn: !!user, login, signup, logout: _logout, updateProfile }}>
+    <AuthContext.Provider value={{ user, isLoggedIn: !!user, login, signup, logout, updateProfile }}>
       {children}
     </AuthContext.Provider>
   );
