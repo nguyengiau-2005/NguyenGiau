@@ -4,6 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
 
+import FloatingChatButton from '@/components/FloatingChatButton';
 import { AuthProvider, useAuth } from '@/contexts/Auth';
 import { CartProvider } from '@/contexts/CartContext';
 import { FavoritesProvider } from '@/contexts/FavoritesContext';
@@ -22,7 +23,7 @@ function RootLayoutNav() {
   // Force the initial route to welcome so it shows first.
   useEffect(() => {
     try {
-      router.replace('/welcome' as any);
+      router.replace('/welcom' as any);
     } catch (e) {
       // ignore if router not ready
     }
@@ -30,14 +31,14 @@ function RootLayoutNav() {
   }, []);
 
   return (
-    <Stack>
-      <Stack.Screen name="welcome" options={{ headerShown: false }} />
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="welcom" />
       {!isLoggedIn ? (
-        <Stack.Screen name="auth" options={{ headerShown: false }} />
+        <Stack.Screen name="auth" />
       ) : (
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="(tabs)" />
       )}
-      <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+      <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal', headerShown: true }} />
     </Stack>
   );
 }
@@ -53,6 +54,7 @@ export default function RootLayout() {
             <OrdersProvider>
               <RecentProvider>
                 <RootLayoutNav />
+                  <FloatingChatButton />
                 <StatusBar style="auto" />
               </RecentProvider>
             </OrdersProvider>

@@ -1,9 +1,15 @@
 import { AppColors } from '@/constants/theme';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { Image as ImgIcon } from 'lucide-react-native';
+import { ChevronLeft, Image as ImgIcon, SendHorizontal, Trash2 } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, Image, KeyboardAvoidingView, Platform, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import {
+  ActivityIndicator, Alert, FlatList, Image,
+  KeyboardAvoidingView, Platform,
+  StyleSheet,
+  Text, TextInput,
+  TouchableOpacity, View
+} from 'react-native';
 
 type ChatMessage = {
   id: string;
@@ -23,14 +29,10 @@ export default function ChatSupportScreen() {
   const [loadingHistory, setLoadingHistory] = useState(true);
   const flatRef = useRef<FlatList<ChatMessage>>(null);
 
-  // Optional AsyncStorage
   let AsyncStorage: any | null = null;
   try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     AsyncStorage = require('@react-native-async-storage/async-storage').default;
-  } catch (e) {
-    AsyncStorage = null;
-  }
+  } catch (e) { AsyncStorage = null; }
 
   useEffect(() => {
     (async () => {
@@ -38,9 +40,7 @@ export default function ChatSupportScreen() {
         try {
           const raw = await AsyncStorage.getItem(STORAGE_KEY);
           if (raw) setMessages(JSON.parse(raw));
-        } catch (err) {
-          console.warn('Failed to load chat history', err);
-        }
+        } catch (err) { console.warn('Failed to load chat history', err); }
       }
       setLoadingHistory(false);
     })();
@@ -51,9 +51,7 @@ export default function ChatSupportScreen() {
     (async () => {
       try {
         await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
-      } catch (err) {
-        console.warn('Failed to save chat history', err);
-      }
+      } catch (err) { console.warn('Failed to save chat history', err); }
     })();
   }, [messages]);
 
@@ -69,38 +67,35 @@ export default function ChatSupportScreen() {
     appendMessage(msg);
     setInput('');
 
-    // Simulate bot reply
     setTimeout(() => {
       const bot: ChatMessage = { id: (Date.now()+1).toString(), sender: 'bot', text: generateBotReply(msg), ts: Date.now() };
       appendMessage(bot);
       setSending(false);
-    }, 800 + Math.random() * 900);
+    }, 1500);
   };
 
   const generateBotReply = (userMsg: ChatMessage) => {
-    if (userMsg.imageUri) return 'Cảm ơn, chúng tôi đã nhận hình ảnh. Nhân viên sẽ kiểm tra và phản hồi.';
+    if (userMsg.imageUri) return 'Cảm ơn, chúng tôi đã nhận hình ảnh. Nhân viên CSKH sẽ phản hồi bạn ngay lập tức.';
     const t = (userMsg.text || '').toLowerCase();
-    if (t.includes('đổi') || t.includes('refund')) return 'Để đổi trả, vui lòng cung cấp mã đơn hàng và mô tả vấn đề.';
-    if (t.includes('giao') || t.includes('trễ')) return 'Thời gian giao hàng thường 2-5 ngày làm việc, tùy khu vực.';
-    return 'Cảm ơn bạn đã liên hệ, CSKH sẽ trả lời sớm.';
+    if (t.includes('đổi') || t.includes('refund')) return 'Để đổi trả sản phẩm, bạn vui lòng chụp lại hóa đơn và mã vận đơn giúp shop nhé.';
+    if (t.includes('giao') || t.includes('trễ')) return 'Hiện tại đơn hàng đang được vận chuyển. Bạn có thể kiểm tra ở mục "Đơn hàng của tôi".';
+    return 'Chào bạn, Fiora Luxe đã nhận được yêu cầu của bạn. Chúng tôi sẽ phản hồi trong giây lát.';
   };
 
   const pickImage = async () => {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
       const ImagePicker = require('expo-image-picker');
       const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.7 });
-      if (!res.cancelled) {
-        await sendUserMessage(undefined, res.uri);
+      if (!res.canceled) {
+        await sendUserMessage(undefined, res.assets[0].uri);
       }
     } catch (err) {
-      Alert.alert('Không thể chọn ảnh', 'Cài đặt `expo-image-picker` để gửi ảnh.');
-      console.warn('ImagePicker error', err);
+      Alert.alert('Lỗi', 'Không thể truy cập thư viện ảnh.');
     }
   };
 
   const clearHistory = async () => {
-    Alert.alert('Xác nhận', 'Xóa lịch sử chat?', [
+    Alert.alert('Xóa lịch sử', 'Tất cả tin nhắn sẽ bị xóa vĩnh viễn?', [
       { text: 'Hủy', style: 'cancel' },
       { text: 'Xóa', style: 'destructive', onPress: async () => {
         setMessages([]);
@@ -109,59 +104,178 @@ export default function ChatSupportScreen() {
     ]);
   };
 
+  const renderItem = ({ item }: { item: ChatMessage }) => {
+    const isUser = item.sender === 'user';
+    return (
+      <View style={[styles.messageRow, isUser ? styles.userRow : styles.botRow]}>
+        {!isUser && (
+          <Image 
+            source={{ uri: 'https://cdn-icons-png.flaticon.com/512/4712/4712035.png' }} 
+            style={styles.avatar} 
+          />
+        )}
+        <View style={[styles.bubble, isUser ? styles.userBubble : styles.botBubble]}>
+          {item.text ? <Text style={[styles.msgText, isUser ? styles.userText : styles.botText]}>{item.text}</Text> : null}
+          {item.imageUri ? <Image source={{ uri: item.imageUri }} style={styles.msgImage} /> : null}
+          <Text style={[styles.tsText, isUser ? styles.userTs : styles.botTs]}>
+            {new Date(item.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </Text>
+        </View>
+      </View>
+    );
+  };
+
   return (
-    <View style={{ flex: 1, backgroundColor: AppColors.background }}>
-      <LinearGradient colors={[AppColors.primary, AppColors.primaryLight]} style={{ paddingTop: 44, paddingBottom: 12, paddingHorizontal: 16 }}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Text style={{ color: '#fff', fontSize: 18, fontWeight: '800' }}>Chat với CSKH</Text>
-          <View style={{ flexDirection: 'row' }}>
-            <TouchableOpacity onPress={clearHistory} style={{ padding: 6 }}>
-              <Text style={{ color: '#fff' }}>Xóa</Text>
-            </TouchableOpacity>
+    <View style={styles.container}>
+      {/* Header */}
+      <LinearGradient colors={[AppColors.primary, AppColors.primaryLight]} style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn}>
+          <ChevronLeft color="#fff" size={24} />
+        </TouchableOpacity>
+        
+        <View style={styles.headerCenter}>
+          <Text style={styles.headerTitle}>Hỗ trợ trực tuyến</Text>
+          <View style={styles.statusRow}>
+            <View style={styles.statusDot} />
+            <Text style={styles.statusText}>Sẵn sàng phản hồi</Text>
           </View>
         </View>
+
+        <TouchableOpacity onPress={clearHistory} style={styles.iconBtn}>
+          <Trash2 color="#fff" size={20} />
+        </TouchableOpacity>
       </LinearGradient>
 
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={90}>
+      <KeyboardAvoidingView 
+        style={{ flex: 1 }} 
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined} 
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+      >
         {loadingHistory ? (
-          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-            <ActivityIndicator size="large" color={AppColors.primary} />
-          </View>
+          <ActivityIndicator size="large" color={AppColors.primary} style={{ flex: 1 }} />
         ) : (
           <FlatList
             ref={flatRef}
             data={messages}
             keyExtractor={m => m.id}
-            contentContainerStyle={{ padding: 12, paddingBottom: 96 }}
-            renderItem={({ item }) => (
-              <View style={{ marginBottom: 12, alignItems: item.sender === 'user' ? 'flex-end' : 'flex-start' }}>
-                <View style={{ maxWidth: '82%', backgroundColor: item.sender === 'user' ? AppColors.primary : '#fff', padding: 10, borderRadius: 10 }}>
-                  {item.text ? <Text style={{ color: item.sender === 'user' ? '#fff' : '#333' }}>{item.text}</Text> : null}
-                  {item.imageUri ? <Image source={{ uri: item.imageUri }} style={{ width: 200, height: 140, borderRadius: 8, marginTop: 8 }} /> : null}
-                  <Text style={{ fontSize: 10, color: item.sender === 'user' ? '#fff' : '#999', marginTop: 6 }}>{new Date(item.ts).toLocaleTimeString()}</Text>
+            contentContainerStyle={styles.listContent}
+            renderItem={renderItem}
+            ListFooterComponent={sending ? (
+                <View style={styles.typingContainer}>
+                    <Text style={styles.typingText}>Bot đang soạn tin nhắn...</Text>
                 </View>
-              </View>
-            )}
+            ) : null}
           />
         )}
 
-        <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, padding: 12, backgroundColor: AppColors.surface, borderTopWidth: 1, borderTopColor: AppColors.divider }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <TouchableOpacity onPress={pickImage} style={{ padding: 8 }}>
-              <ImgIcon color={AppColors.primary} />
-            </TouchableOpacity>
-            <TextInput
-              placeholder="Nhập tin nhắn..."
-              value={input}
-              onChangeText={setInput}
-              style={{ flex: 1, backgroundColor: '#fff', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8 }}
-            />
-            <TouchableOpacity onPress={() => sendUserMessage(input)} disabled={sending || input.trim().length === 0} style={{ marginLeft: 8, backgroundColor: input.trim() ? AppColors.primary : '#ccc', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 8 }}>
-              <Text style={{ color: '#fff', fontWeight: '700' }}>{sending ? '...' : 'Gửi'}</Text>
-            </TouchableOpacity>
-          </View>
+        {/* Input Bar */}
+        <View style={styles.inputBar}>
+          <TouchableOpacity onPress={pickImage} style={styles.attachmentBtn}>
+            <ImgIcon color={AppColors.primary} size={24} />
+          </TouchableOpacity>
+          
+          <TextInput
+            placeholder="Viết tin nhắn..."
+            value={input}
+            onChangeText={setInput}
+            style={styles.textInput}
+            multiline
+          />
+
+          <TouchableOpacity 
+            onPress={() => sendUserMessage(input)} 
+            disabled={!input.trim() && !sending}
+            style={[styles.sendBtn, !input.trim() && styles.sendBtnDisabled]}
+          >
+            <SendHorizontal color="#fff" size={20} />
+          </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#F5F7FB' },
+  header: {
+    paddingTop: Platform.OS === 'ios' ? 50 : 40,
+    paddingBottom: 15,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  headerCenter: { alignItems: 'center' },
+  headerTitle: { color: '#fff', fontSize: 17, fontWeight: '700' },
+  statusRow: { flexDirection: 'row', alignItems: 'center', marginTop: 2 },
+  statusDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#4ADE80', marginRight: 4 },
+  statusText: { color: 'rgba(255,255,255,0.8)', fontSize: 11 },
+  iconBtn: { padding: 8 },
+  listContent: { padding: 16, paddingBottom: 100 },
+  messageRow: { flexDirection: 'row', marginBottom: 16, alignItems: 'flex-end' },
+  userRow: { justifyContent: 'flex-end' },
+  botRow: { justifyContent: 'flex-start' },
+  avatar: { width: 32, height: 32, borderRadius: 16, marginRight: 8, backgroundColor: '#E1E8F0' },
+  bubble: {
+    maxWidth: '75%',
+    padding: 12,
+    borderRadius: 20,
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+  },
+  userBubble: {
+    backgroundColor: AppColors.primary,
+    borderBottomRightRadius: 4,
+  },
+  botBubble: {
+    backgroundColor: '#fff',
+    borderBottomLeftRadius: 4,
+  },
+  msgText: { fontSize: 15, lineHeight: 20 },
+  userText: { color: '#fff' },
+  botText: { color: '#333' },
+  msgImage: { width: 200, height: 150, borderRadius: 12, marginTop: 8 },
+  tsText: { fontSize: 10, marginTop: 4, alignSelf: 'flex-end' },
+  userTs: { color: 'rgba(255,255,255,0.7)' },
+  botTs: { color: '#999' },
+  inputBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: '#fff',
+    borderTopWidth: 1,
+    borderTopColor: '#ECEFF3',
+    paddingBottom: Platform.OS === 'ios' ? 30 : 10,
+  },
+  attachmentBtn: { padding: 10 },
+  textInput: {
+    flex: 1,
+    backgroundColor: '#F0F2F5',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 24,
+    fontSize: 15,
+    maxHeight: 100,
+    marginHorizontal: 8,
+  },
+  sendBtn: {
+    backgroundColor: AppColors.primary,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  sendBtnDisabled: { backgroundColor: '#E1E8F0' },
+  typingContainer: { paddingHorizontal: 16, marginBottom: 10 },
+  typingText: { fontSize: 12, color: '#999', fontStyle: 'italic' }
+});

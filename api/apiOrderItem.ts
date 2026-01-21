@@ -3,82 +3,59 @@ import { CONFIG } from './config';
 
 // --- Types & Interfaces ---
 
-/**
- * Cấu trúc liên kết bảng (Reused)
- * Dùng cho: order_id, product_size_id, size_ml
- */
 export interface BaserowLink {
   id: number;
   value: string;
 }
 
 /**
- * Cấu trúc dữ liệu Chi tiết đơn hàng (Order Item)
- * Khớp với JSON: order_item_id, product_name, price, quantity...
+ * Cấu trúc dữ liệu nhận về từ GET OrderItem
+ * Khớp 100% với JSON kết quả của bạn
  */
 export interface OrderItemData {
   id: number;
   order: string;
-  order_item_id: string;      // Mã riêng của dòng này (nếu có)
-  
-  order_id: BaserowLink[];    // Liên kết về đơn hàng cha (Order)
-  
-  product_id: number;         // ID sản phẩm (Theo JSON là số, không phải Link Row)
-  product_name: string;       // Tên sản phẩm lưu tĩnh (Snapshot)
-  
-  price: string;              // Giá tại thời điểm mua
-  quantity: number;
-  total: string;              // Thành tiền (price * quantity)
-  
-  image_url: string;          // Link ảnh (Chuỗi text, không phải object File)
-  
-  product_size_id: BaserowLink[]; // Link tới bảng Size
-  size_ml: BaserowLink[];     // Link/Lookup hiển thị ml
-}
-
-/**
- * Payload để tạo mới một dòng Order Item
- * Dùng khi user nhấn "Đặt hàng", ta loop qua giỏ hàng và tạo từng dòng này.
- */
-export interface CreateOrderItemPayload {
-  order_item_id?: string;
-  order_id?: number[];        // Có thể chưa có ngay lúc tạo item nếu flow là tạo item trước
+  order_item_id: string; // Thường là Formula hoặc ID định danh
+  order_id: BaserowLink[]; 
   product_id: number;
   product_name: string;
-  price: number | string;
+  price: string;         // Decimal string (ví dụ: "250.00")
   quantity: number;
-  total: number | string;
-  image_url?: string;
-  product_size_id?: number[]; // Mảng ID của size
+  total: string;         // Decimal string
+  image_url: string;
+  product_size_id: BaserowLink[];
+  size_ml: BaserowLink[];
 }
 
 /**
- * Cấu trúc phản hồi phân trang
+ * Payload để tạo mới một Order Item (POST)
  */
-export interface BaserowResponse<T> {
-  count: number;
-  next: string | null;
-  previous: string | null;
-  results: T[];
+export interface CreateOrderItemPayload {
+  // Đối với Link Row, chỉ gửi mảng chứa ID (number[])
+  order_id?: number[];
+  
+  product_id: number;
+  product_name: string;
+  price: string | number;
+  quantity: number;
+  image_url?: string;
+  
+  // Lưu ý: Nếu 'total' và 'order_item_id' là Formula, hãy để dấu ? 
+  // và KHÔNG gửi chúng trong payload thực tế.
+  total?: string | number;
+  order_item_id?: string;
+
+  product_size_id?: number[];
+  size_ml?: number[];
 }
 
 // --- API Functions ---
 
-// Base URL cho table Order Item
 const getOrderItemUrl = () => `/${CONFIG.ORDER_ITEM_TABLE_ID}/?user_field_names=true`;
 
 const apiOrderItem = {
   /**
-   * 1. Lấy tất cả các items (Ít dùng trực tiếp, thường dùng filter theo Order)
-   */
-  getAllOrderItems: async (params?: any): Promise<BaserowResponse<OrderItemData>> => {
-    const response = await axiosClient.get(getOrderItemUrl(), { params });
-    return response.data;
-  },
-
-  /**
-   * 2. Tạo một Order Item mới
-   * Đây là bước quan trọng nhất trong loop xử lý giỏ hàng
+   * Tạo chi tiết món hàng trong đơn
    */
   createOrderItem: async (data: CreateOrderItemPayload): Promise<OrderItemData> => {
     const response = await axiosClient.post(getOrderItemUrl(), data);
@@ -86,31 +63,15 @@ const apiOrderItem = {
   },
 
   /**
-   * 3. Lấy danh sách item thuộc về một Đơn hàng cụ thể
-   * Dùng để hiển thị chi tiết đơn hàng (Order Detail Page)
-   * @param orderId ID của dòng trong bảng Order
+   * Lấy danh sách items theo bảng Order chính (Dùng filter)
    */
-  getItemsByOrderId: async (orderId: number): Promise<BaserowResponse<OrderItemData>> => {
-    const filterParams = encodeURIComponent(JSON.stringify({
+  getItemsByOrder: async (orderId: number): Promise<OrderItemData[]> => {
+    const filters = JSON.stringify({
       filter_type: "AND",
-      filters: [
-        { 
-          type: "link_row_has", 
-          field: "order_id", 
-          value: orderId.toString() 
-        }
-      ]
-    }));
-    
-    const response = await axiosClient.get(`${getOrderItemUrl()}&filters=${filterParams}`);
-    return response.data;
-  },
-
-  /**
-   * 4. Xóa một item (Nếu cần thiết, ví dụ: Admin sửa đơn hàng)
-   */
-  deleteOrderItem: async (id: number): Promise<void> => {
-    await axiosClient.delete(`/${CONFIG.ORDER_ITEM_TABLE_ID}/${id}/`);
+      filters: [{ type: "link_row_has", field: "order_id", value: orderId.toString() }]
+    });
+    const response = await axiosClient.get(getOrderItemUrl(), { params: { filters } });
+    return response.data.results;
   }
 };
 

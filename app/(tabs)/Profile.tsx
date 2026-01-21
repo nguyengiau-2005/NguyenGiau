@@ -198,29 +198,6 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        {/* ====== ORDER STATUS ====== */}
-        <View style={{ marginHorizontal: 16, marginTop: 20 }}>
-          <Text style={{ fontSize: 14, fontWeight: '700', color: '#333', marginBottom: 12 }}>Trạng thái đơn hàng</Text>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 8 }}>
-            {[
-              { label: 'Chờ xác nhận', icon: '📋', color: '#ffa726' },
-              { label: 'Chờ lấy', icon: '📦', color: '#42a5f5' },
-              { label: 'Đang giao', icon: '🚚', color: '#66bb6a' },
-              { label: 'Đã giao', icon: '✓', color: '#29b6f6' },
-              { label: 'Đã hủy', icon: '✕', color: '#ef5350' }
-            ].map((status, idx) => (
-              <TouchableOpacity
-                key={idx}
-                style={{ flex: 1, backgroundColor: '#fff', padding: 12, borderRadius: 10, alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 3, elevation: 1 }}
-                onPress={() => Alert.alert(status.label, 'Không có đơn hàng')}
-              >
-                <Text style={{ fontSize: 18, marginBottom: 4 }}>{status.icon}</Text>
-                <Text style={{ fontSize: 10, fontWeight: '600', color: '#333', textAlign: 'center' }}>{status.label}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
         {/* ====== ACCOUNT SECTION ====== */}
         <View style={{ marginHorizontal: 16, marginTop: 20 }}>
           <Text style={{ fontSize: 14, fontWeight: '700', color: '#333', marginBottom: 10 }}>Quản lý tài khoản</Text>

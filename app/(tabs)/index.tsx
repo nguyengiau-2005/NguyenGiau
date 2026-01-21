@@ -895,7 +895,7 @@ export default function HomeScreen() {
 
           {filteredProducts.length > 0 ? (
             <FlatList
-              data={filteredProducts.slice(0, 6)}
+              data={productsList} // Lấy toàn bộ danh sách productsList
               renderItem={renderProductCard}
               keyExtractor={(item) => item.id.toString()}
               numColumns={2}

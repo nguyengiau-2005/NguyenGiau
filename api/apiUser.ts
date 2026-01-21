@@ -1,3 +1,4 @@
+import axios from 'axios';
 import axiosClient from './axiosClient';
 import { CONFIG } from './config';
 
@@ -80,7 +81,14 @@ const apiUser = {
     
     // Xác định định dạng file
     const match = /\.(\w+)$/.exec(filename);
-    const type = match ? `image/${match[1]}` : `image`;
+    const ext = match ? match[1].toLowerCase() : '';
+    // basic mime map
+    const mimeMap: Record<string, string> = {
+      jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', gif: 'image/gif', webp: 'image/webp',
+      mp4: 'video/mp4', mov: 'video/quicktime', mkv: 'video/x-matroska',
+      heic: 'image/heic'
+    };
+    const type = mimeMap[ext] || (ext.startsWith('mp') ? `video/${ext}` : `image/${ext || 'jpeg'}`);
 
     // @ts-ignore
     formData.append('file', {
@@ -90,8 +98,13 @@ const apiUser = {
     });
 
     // Upload lên endpoint riêng của Baserow dành cho file
-    const response = await axiosClient.post('/user-files/upload-file/', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
+    // Note: axiosClient.baseURL points to the /table/ path, so we must call the absolute user-files endpoint.
+    const uploadUrl = 'https://api.baserow.io/api/user-files/upload-file/';
+    const response = await axios.post(uploadUrl, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        'Authorization': `Token ${CONFIG.BASEROW_TOKEN}`
+      },
     });
 
     // Trả về thuộc tính "name" do Baserow sinh ra (Ví dụ: "abc_123.jpg")

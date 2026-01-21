@@ -6,7 +6,8 @@ export type CartItem = {
   price: number;
   qty: number;
   img: any;
-  volume?: string;
+  volume?: string;    // Thêm hoặc cập nhật dòng này
+  sizeId?: number;    // <--- QUAN TRỌNG: Thêm dòng này để TS cho phép lưu ID của size
 };
 
 type CartContextType = {

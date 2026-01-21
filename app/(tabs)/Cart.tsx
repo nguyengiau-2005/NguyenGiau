@@ -1,3 +1,4 @@
+import apiPromotion, { PromotionData } from '@/api/apiPromotion';
 import { AppColors } from '@/constants/theme';
 import { useCart } from '@/contexts/CartContext';
 import { formatCurrencyFull } from '@/utils/format';
@@ -5,7 +6,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import {
   ArrowLeft,
-  ChevronRight,
   Gift,
   Home,
   Minus,
@@ -13,7 +13,7 @@ import {
   ShoppingCart,
   Trash2
 } from 'lucide-react-native';
-import { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Alert,
   Image,
@@ -24,38 +24,67 @@ import {
   View
 } from 'react-native';
 
-// Khai báo hằng số trực tiếp
 const SHIPPING_FEE = 15.000;
-const FREE_SHIP_LIMIT = 50.000;
+const FREE_SHIP_LIMIT = 500.000;
 
 export default function CartScreen() {
-  const { cart, removeFromCart, updateQty, setSelectedCheckoutItems } = useCart();
   const router = useRouter();
+  const { cart, removeFromCart, updateQty, setSelectedCheckoutItems } = useCart();
+
+  const [promotions, setPromotions] = useState<PromotionData[]>([]);
+  const [selectedVoucher, setSelectedVoucher] = useState<PromotionData | null>(null);
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
 
-  // --- LOGIC TÍNH TOÁN TRỰC TIẾP ---
-  const selectedCartItems = cart.filter(item => 
+  // Lấy danh sách voucher từ API
+  useEffect(() => {
+    const fetchPromotions = async () => {
+      try {
+        const res = await apiPromotion.getPublicPromotions();
+        setPromotions(res.results || []);
+      } catch (err) {
+        console.error("Lỗi lấy voucher:", err);
+      }
+    };
+    fetchPromotions();
+  }, []);
+
+  // --- LOGIC TÍNH TOÁN (DUY NHẤT) ---
+  const selectedCartItems = cart.filter(item =>
     selectedItems.includes(`${item.id}-${item.volume ?? '50ml'}`)
   );
 
-  // 1. Tính tiền hàng
   const subtotal = selectedCartItems.reduce((sum, item) => sum + (item.price * item.qty), 0);
-  
-  // 2. Tính phí ship (Ví dụ: 450k + 15k ship = 465k)
-  const shipping = SHIPPING_FEE && subtotal < FREE_SHIP_LIMIT ? SHIPPING_FEE : 0;
-  
-  // 3. Tổng thanh toán
-  const finalTotal = subtotal + shipping;
+
+  let discountAmount = 0;
+  if (selectedVoucher && subtotal >= Number(selectedVoucher.min_spend)) {
+    // Ép kiểu giá trị giảm giá về Number để thực hiện phép tính arithmetic
+    const vValue = Number(selectedVoucher.discount_value);
+
+    if (selectedVoucher.discount_type.value === 'Percentage') {
+      discountAmount = (subtotal * vValue) / 100;
+    } else {
+      discountAmount = vValue;
+    }
+  }
+  const shipping = (subtotal > 0 && subtotal < FREE_SHIP_LIMIT) ? SHIPPING_FEE : 0;
+  const finalTotal = Math.max(0, subtotal + shipping - discountAmount);
 
   const toggleSelectItem = (key: string) => {
     setSelectedItems(prev => prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]);
+  };
+
+  const handleSelectVoucher = (voucher: PromotionData) => {
+    if (subtotal < Number(voucher.min_spend)) {
+      Alert.alert("Chưa đủ điều kiện", `Đơn hàng cần tối thiểu ${formatCurrencyFull(voucher.min_spend)} để dùng mã này.`);
+      return;
+    }
+    setSelectedVoucher(voucher);
   };
 
   if (!cart.length) return <EmptyCartView router={router} />;
 
   return (
     <View style={styles.container}>
-      {/* Header */}
       <LinearGradient colors={[AppColors.primary, AppColors.primaryLight]} style={styles.header}>
         <View style={styles.headerRow}>
           <TouchableOpacity onPress={() => router.back()}><ArrowLeft size={24} color="#fff" /></TouchableOpacity>
@@ -65,7 +94,6 @@ export default function CartScreen() {
       </LinearGradient>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 160 }}>
-        
         {/* Danh sách sản phẩm */}
         <View style={styles.section}>
           {cart.map((item) => {
@@ -73,8 +101,8 @@ export default function CartScreen() {
             const isSelected = selectedItems.includes(itemKey);
             return (
               <View key={itemKey} style={styles.productCard}>
-                <TouchableOpacity 
-                  onPress={() => toggleSelectItem(itemKey)} 
+                <TouchableOpacity
+                  onPress={() => toggleSelectItem(itemKey)}
                   style={[styles.checkbox, isSelected && styles.checkboxActive]}
                 >
                   {isSelected && <View style={styles.checkInner} />}
@@ -102,25 +130,50 @@ export default function CartScreen() {
             );
           })}
         </View>
-
-        {/* Voucher Info */}
-        <TouchableOpacity style={styles.infoRow} onPress={() => Alert.alert("Voucher", "Voucher sẽ được áp dụng tự động tại đây.")}>
-          <View style={styles.rowLeft}>
+        {/* Voucher Selection Section */}
+        <View style={styles.voucherSection}>
+          <View style={styles.sectionHeader}>
             <Gift size={20} color={AppColors.primary} />
-            <Text style={styles.rowText}>Chọn hoặc nhập mã giảm giá</Text>
+            <Text style={styles.voucherTitle}>Mã giảm giá dành cho bạn</Text>
           </View>
-          <ChevronRight size={20} color="#CCC" />
-        </TouchableOpacity>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.voucherScroll}>
+            {promotions.map((item) => {
+              const isApplied = selectedVoucher?.id === item.id;
+              const isLocked = subtotal < Number(item.min_spend);
+              return (
+                <TouchableOpacity
+                  key={item.id}
+                  style={[styles.voucherCard, isApplied && styles.voucherCardActive, isLocked && { opacity: 0.5 }]}
+                  onPress={() => handleSelectVoucher(item)}
+                >
+                  <Text style={[styles.vCode, isApplied && { color: '#fff' }]}>{item.code}</Text>
+                  <Text style={[styles.vValue, isApplied && { color: '#fff' }]}>
+                    Giảm {item.discount_type.value === 'Percentage' ? `${item.discount_value}%` : formatCurrencyFull(item.discount_value)}
+                  </Text>
+                  <Text style={[styles.vMin, isApplied && { color: '#eee' }]}>Đơn từ {formatCurrencyFull(item.min_spend)}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+          {selectedVoucher && (
+            <TouchableOpacity onPress={() => setSelectedVoucher(null)}>
+              <Text style={styles.removeVoucher}>Hủy áp dụng mã</Text>
+            </TouchableOpacity>
+          )}
+        </View>
 
-        {/* Bảng tính toán trực tiếp */}
+        {/* Summary Card */}
         <View style={styles.summaryCard}>
           <SummaryLine label="Tổng tiền hàng" value={formatCurrencyFull(subtotal)} />
-          <SummaryLine 
-            label="Phí vận chuyển" 
-            value={shipping === 0 && subtotal > 0 ? "Miễn phí" : shipping} 
+          <SummaryLine
+            label="Phí vận chuyển"
+            value={shipping === 0 && subtotal > 0 ? "Miễn phí" : formatCurrencyFull(shipping)}
             isFree={shipping === 0 && subtotal > 0}
           />
-          
+          {discountAmount > 0 && (
+            <SummaryLine label="Giảm giá Voucher" value={`-${formatCurrencyFull(discountAmount)}`} isDiscount />
+          )}
+
           <View style={styles.divider} />
 
           <View style={styles.totalRow}>
@@ -136,14 +189,16 @@ export default function CartScreen() {
           <Text style={styles.bottomLabel}>Tổng thanh toán</Text>
           <Text style={styles.bottomPrice}>{formatCurrencyFull(finalTotal)}</Text>
         </View>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[styles.checkoutBtn, !selectedItems.length && styles.btnDisabled]}
           onPress={() => {
             setSelectedCheckoutItems(selectedCartItems);
-            // TRUYỀN TỔNG TIỀN QUA PARAMS
             router.push({
               pathname: '/user/checkout',
-              params: { totalAmount: finalTotal }
+              params: {
+                totalAmount: finalTotal,
+                voucherId: selectedVoucher?.id
+              }
             } as any);
           }}
           disabled={!selectedItems.length}
@@ -156,10 +211,14 @@ export default function CartScreen() {
 }
 
 // Components bổ trợ
-const SummaryLine = ({ label, value, isFree }: any) => (
+const SummaryLine = ({ label, value, isFree, isDiscount }: any) => (
   <View style={styles.summaryLine}>
     <Text style={styles.summaryLabel}>{label}</Text>
-    <Text style={[styles.summaryValue, isFree && { color: '#27ae60' }]}>{value}</Text>
+    <Text style={[
+      styles.summaryValue,
+      isFree && { color: '#27ae60' },
+      isDiscount && { color: '#e74c3c' }
+    ]}>{value}</Text>
   </View>
 );
 
@@ -181,8 +240,8 @@ const styles = StyleSheet.create({
   section: { padding: 16 },
   productCard: { flexDirection: 'row', backgroundColor: '#fff', borderRadius: 20, padding: 12, marginBottom: 12, alignItems: 'center', elevation: 2 },
   checkbox: { width: 22, height: 22, borderRadius: 6, borderWidth: 2, borderColor: AppColors.primary, justifyContent: 'center', alignItems: 'center' },
-  checkboxActive: { backgroundColor: '#fff' },
-  checkInner: { width: 12, height: 12, borderRadius: 3, backgroundColor: AppColors.primary },
+  checkboxActive: { backgroundColor: AppColors.primary },
+  checkInner: { width: 10, height: 10, borderRadius: 2, backgroundColor: '#fff' },
   productImg: { width: 75, height: 75, borderRadius: 15, marginLeft: 12, backgroundColor: '#F1F1F1' },
   productDetails: { flex: 1, marginLeft: 12 },
   productName: { fontSize: 14, fontWeight: '700', color: '#333' },
@@ -192,9 +251,18 @@ const styles = StyleSheet.create({
   quantityBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8F9FA', borderRadius: 10, padding: 4, gap: 12 },
   qtyText: { fontSize: 13, fontWeight: '700' },
   deleteBtn: { padding: 8 },
-  infoRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fff', marginHorizontal: 16, padding: 15, borderRadius: 18, marginBottom: 15, elevation: 1 },
-  rowLeft: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 },
-  rowText: { fontSize: 13, fontWeight: '600', color: '#444' },
+  // Voucher styles
+  voucherSection: { paddingHorizontal: 16, marginBottom: 15 },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
+  voucherTitle: { fontSize: 15, fontWeight: '700', color: '#333' },
+  voucherScroll: { flexDirection: 'row' },
+  voucherCard: { backgroundColor: '#fff', padding: 12, borderRadius: 15, marginRight: 10, borderWidth: 1, borderColor: '#eee', width: 150 },
+  voucherCardActive: { backgroundColor: AppColors.primary, borderColor: AppColors.primary },
+  vCode: { fontWeight: '800', color: AppColors.primary, fontSize: 13 },
+  vValue: { fontWeight: '700', color: '#333', fontSize: 12, marginTop: 2 },
+  vMin: { fontSize: 10, color: '#999', marginTop: 2 },
+  removeVoucher: { textAlign: 'right', color: AppColors.primary, marginTop: 5, fontSize: 12, fontWeight: '600' },
+  // Summary styles
   summaryCard: { backgroundColor: '#fff', marginHorizontal: 16, padding: 20, borderRadius: 25, elevation: 1 },
   summaryLine: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
   summaryLabel: { color: '#888', fontSize: 13, fontWeight: '500' },
